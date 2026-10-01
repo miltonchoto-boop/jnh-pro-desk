@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JNH Masonry Pro Desk</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">JNH</div>
+        <div class="brand-text">
+          <strong>JNH Masonry Pro Desk</strong>
+          <span>Estimates · Labor · Vendors · Receipts</span>
+        </div>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button class="tab active" data-view="estimates" type="button">Estimates</button>
+        <button class="tab" data-view="employees" type="button">Employees</button>
+        <button class="tab" data-view="timelog" type="button">Time Log</button>
+        <button class="tab" data-view="payroll" type="button">Weekly Payroll</button>
+        <button class="tab" data-view="vendors" type="button">Vendors</button>
+        <button class="tab" data-view="receipts" type="button">Receipts</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ESTIMATES LIST -->
+      <section id="view-estimates" class="view active">
+        <div class="panel-head">
+          <div>
+            <h1>Estimates</h1>
+            <p class="muted">Create professional estimates with labor, materials, and scope sections.</p>
+          </div>
+          <div class="actions">
+            <button class="btn ghost" id="btn-import-json" type="button">Import JSON</button>
+            <input type="file" id="import-file" accept="application/json,.json" hidden />
+            <button class="btn primary" id="btn-new-estimate" type="button">+ New Estimate</button>
+          </div>
+        </div>
+        <div id="estimates-list" class="card-grid"></div>
+        <p id="estimates-empty" class="empty-state hidden">No estimates yet. Click <strong>+ New Estimate</strong> to start.</p>
+      </section>
+
+      <!-- ESTIMATE EDITOR -->
+      <section id="view-editor" class="view">
+        <div class="panel-head">
+          <div>
+            <button class="btn ghost small" id="btn-back-estimates" type="button">← Back</button>
+            <h1 id="editor-title">New Estimate</h1>
+          </div>
+          <div class="actions">
+            <button class="btn ghost" id="btn-export-estimate" type="button">Export JSON</button>
+            <button class="btn ghost" id="btn-preview-print" type="button">Print / PDF</button>
+            <button class="btn primary" id="btn-save-estimate" type="button">Save Estimate</button>
+          </div>
+        </div>
+
+        <form id="estimate-form" class="stack">
+          <div class="card">
+            <h2>Customer &amp; Project</h2>
+            <div class="grid-2">
+              <label>Customer name
+                <input type="text" name="customerName" required placeholder="Full name" />
+              </label>
+              <label>Phone
+                <input type="tel" name="customerPhone" placeholder="(631) 555-0100" />
+              </label>
+              <label>Email
+                <input type="email" name="customerEmail" placeholder="customer@email.com" />
+              </label>
+              <label>Estimate date
+                <input type="date" name="estimateDate" required />
+              </label>
+            </div>
+            <label>Project address
+              <input type="text" name="projectAddress" placeholder="Street, City, NY ZIP" />
+            </label>
+            <label>Estimate # (optional)
+              <input type="text" name="estimateNumber" placeholder="Auto if blank" />
+            </label>
+          </div>
+
+          <div class="card">
+            <div class="row-between">
+              <h2>Scope of Work</h2>
+              <button class="btn small" id="btn-add-section" type="button">+ Add Section</button>
+            </div>
+            <div id="scope-sections" class="stack tight"></div>
+          </div>
+
+          <div class="card">
+            <div class="row-between">
+              <h2>Line Items — Labor &amp; Materials</h2>
+              <button class="btn small" id="btn-add-line" type="button">+ Add Line</button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="lines-table">
+                <thead>
+                  <tr>
+                    <th>Description</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th>Labor rate</th>
+                    <th>Material $</th>
+                    <th>Labor total</th>
+                    <th>Line total</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="lines-body"></tbody>
+              </table>
+            </div>
+            <div class="totals-box">
+              <div><span>Labor subtotal</span><strong id="tot-labor">$0.00</strong></div>
+              <div><span>Materials subtotal</span><strong id="tot-materials">$0.00</strong></div>
+              <div class="grand"><span>Total project price</span><strong id="tot-grand">$0.00</strong></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Payment Terms</h2>
+            <div class="grid-2">
+              <label>Deposit amount ($)
+                <input type="number" name="depositAmount" min="0" step="0.01" placeholder="0.00" />
+              </label>
+              <label>Deposit notes
+                <input type="text" name="depositNotes" placeholder="e.g. Required to order materials" />
+              </label>
+            </div>
+            <label>Additional payment terms
+              <textarea name="paymentTerms" rows="3" placeholder="Balance due upon completion. Progress payments as agreed…"></textarea>
+            </label>
+          </div>
+
+          <div class="card disclosures">
+            <h2>Disclosures</h2>
+            <ul>
+              <li>JNH Masonry Inc. is <strong>not responsible</strong> for material shipping delays, shortages, or carrier situations outside our control.</li>
+              <li>JNH Masonry Inc. is <strong>not responsible</strong> for manufacturer material performance, color variation, or product defects beyond what is covered by the manufacturer’s warranty.</li>
+              <li>Estimate is valid for 30 days unless otherwise noted. Work begins after signed acceptance and required deposit.</li>
+            </ul>
+            <label class="check">
+              <input type="checkbox" name="includeDisclosures" checked />
+              Include disclosures on printed estimate
+            </label>
+          </div>
+        </form>
+      </section>
+
+      <!-- EMPLOYEES -->
+      <section id="view-employees" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Employees</h1>
+            <p class="muted">Workers Jose can assign hours to. Pay rates and pay types are used for weekly payroll.</p>
+          </div>
+          <button class="btn primary" id="btn-add-employee" type="button">+ Add Employee</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table class="data-table" id="employees-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role / notes</th>
+                  <th>Pay type</th>
+                  <th>Pay rate ($/hr)</th>
+                  <th>Active</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="employees-body"></tbody>
+            </table>
+          </div>
+          <p id="employees-empty" class="empty-state hidden">No employees yet. Add your crew to track hours.</p>
+        </div>
+      </section>
+
+      <!-- TIME LOG -->
+      <section id="view-timelog" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Time Log</h1>
+            <p class="muted">Log hours per worker, per job, per day.</p>
+          </div>
+          <button class="btn primary" id="btn-add-time" type="button">+ Log Hours</button>
+        </div>
+
+        <div class="card">
+          <form id="time-form" class="grid-2">
+            <input type="hidden" name="entryId" value="" />
+            <label>Employee
+              <select name="employeeId" required></select>
+            </label>
+            <label>Date
+              <input type="date" name="workDate" required />
+            </label>
+            <label>Job / estimate
+              <select name="estimateId">
+                <option value="">— General / no estimate —</option>
+              </select>
+            </label>
+            <label>Hours
+              <input type="number" name="hours" min="0.25" step="0.25" required placeholder="8" />
+            </label>
+            <label class="span-2">Notes
+              <input type="text" name="notes" placeholder="e.g. Footing pour, veneer install" />
+            </label>
+            <div class="span-2 actions">
+              <button class="btn primary" type="submit">Save Entry</button>
+              <button class="btn ghost" type="button" id="btn-cancel-time-edit" hidden>Cancel edit</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="row-between">
+            <h2>Recent entries</h2>
+            <label class="inline">Filter week starting
+              <input type="date" id="timelog-week" />
+            </label>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Employee</th>
+                  <th>Job</th>
+                  <th>Hours</th>
+                  <th>Rate</th>
+                  <th>Pay</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="timelog-body"></tbody>
+            </table>
+          </div>
+          <p id="timelog-empty" class="empty-state hidden">No time entries yet.</p>
+        </div>
+      </section>
+
+      <!-- WEEKLY PAYROLL -->
+      <section id="view-payroll" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Weekly Payroll</h1>
+            <p class="muted">What Jose owes each worker for the selected week (Sun–Sat), split between On books and Cash.</p>
+          </div>
+          <div class="actions">
+            <label class="inline">Week of
+              <input type="date" id="payroll-week" />
+            </label>
+            <button class="btn ghost" id="btn-print-payroll" type="button">Print summary</button>
+          </div>
+        </div>
+        <div class="card" id="payroll-summary">
+          <div class="payroll-breakdown" aria-label="Payroll totals by pay type">
+            <div class="payroll-breakdown-card">
+              <span>On books <small>(NY payroll)</small></span>
+              <strong id="payroll-on-books">$0.00</strong>
+              <small id="payroll-on-books-hours">0.00 hours</small>
+            </div>
+            <div class="payroll-breakdown-card">
+              <span>Cash</span>
+              <strong id="payroll-cash">$0.00</strong>
+              <small id="payroll-cash-hours">0.00 hours</small>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Pay type</th>
+                  <th>Hours</th>
+                  <th>Rate</th>
+                  <th>Amount owed</th>
+                  <th>Jobs worked</th>
+                </tr>
+              </thead>
+              <tbody id="payroll-body"></tbody>
+              <tfoot>
+                <tr>
+                  <td><strong>Week total</strong></td>
+                  <td></td>
+                  <td id="payroll-hours">0</td>
+                  <td></td>
+                  <td id="payroll-owed"><strong>$0.00</strong></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p id="payroll-empty" class="empty-state hidden">No hours logged for this week.</p>
+        </div>
+      </section>
+
+      <!-- VENDORS -->
+      <section id="view-vendors" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Vendors</h1>
+            <p class="muted">Suppliers and material vendors. Link receipts and jobs here.</p>
+          </div>
+          <button class="btn primary" id="btn-add-vendor" type="button">+ Add Vendor</button>
+        </div>
+        <div class="card">
+          <form id="vendor-form" class="grid-2">
+            <input type="hidden" name="vendorId" value="" />
+            <label>Vendor name
+              <input type="text" name="name" required placeholder="e.g. Cambridge Pavers dealer" />
+            </label>
+            <label>Category
+              <select name="category">
+                <option>Materials — Pavers</option>
+                <option>Materials — Stone / Veneer</option>
+                <option>Materials — Concrete / Block</option>
+                <option>Materials — Other</option>
+                <option>Tools / Equipment</option>
+                <option>Fuel</option>
+                <option>Dump / Disposal</option>
+                <option>Other</option>
+              </select>
+            </label>
+            <label>Phone
+              <input type="tel" name="phone" placeholder="(631) …" />
+            </label>
+            <label>Email / contact
+              <input type="text" name="contact" placeholder="Optional" />
+            </label>
+            <label class="span-2">Notes
+              <input type="text" name="notes" placeholder="Account #, preferred SKUs, etc." />
+            </label>
+            <div class="span-2 actions">
+              <button class="btn primary" type="submit">Save Vendor</button>
+              <button class="btn ghost" type="button" id="btn-cancel-vendor-edit" hidden>Cancel edit</button>
+            </div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Phone</th>
+                  <th>Contact</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="vendors-body"></tbody>
+            </table>
+          </div>
+          <p id="vendors-empty" class="empty-state hidden">No vendors yet.</p>
+        </div>
+      </section>
+
+      <!-- RECEIPTS -->
+      <section id="view-receipts" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Receipts &amp; Docs</h1>
+            <p class="muted">Upload or snapshot a receipt. OCR hook extracts vendor, amount, date, category (stub until API wired).</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Capture receipt</h2>
+          <form id="receipt-form" class="stack tight">
+            <input type="hidden" name="receiptId" value="" />
+            <div class="receipt-capture">
+              <label class="dropzone" id="receipt-dropzone">
+                <input type="file" name="file" id="receipt-file" accept="image/*,application/pdf" capture="environment" />
+                <div>
+                  <strong>Upload or take snapshot</strong>
+                  <p class="muted">JPG, PNG, or PDF. Stored locally in this browser.</p>
+                </div>
+              </label>
+              <div id="receipt-preview" class="receipt-preview hidden"></div>
+            </div>
+            <div class="ocr-banner" id="ocr-banner">
+              <span class="badge">OCR</span>
+              <span id="ocr-status">Ready — select a file to run the OCR stub (manual confirm fields below).</span>
+              <button class="btn small" type="button" id="btn-run-ocr" disabled>Run OCR</button>
+            </div>
+            <div class="grid-2">
+              <label>Vendor
+                <select name="vendorId">
+                  <option value="">— Select or add later —</option>
+                </select>
+              </label>
+              <label>Or new vendor name
+                <input type="text" name="vendorNameHint" placeholder="From receipt / OCR" />
+              </label>
+              <label>Amount ($)
+                <input type="number" name="amount" min="0" step="0.01" placeholder="0.00" />
+              </label>
+              <label>Date
+                <input type="date" name="receiptDate" />
+              </label>
+              <label>Category
+                <select name="category">
+                  <option>Materials — Pavers</option>
+                  <option>Materials — Stone / Veneer</option>
+                  <option>Materials — Concrete / Block</option>
+                  <option>Materials — Other</option>
+                  <option>Tools / Equipment</option>
+                  <option>Fuel</option>
+                  <option>Dump / Disposal</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label>Attach to job / estimate
+                <select name="estimateId">
+                  <option value="">— No job —</option>
+                </select>
+              </label>
+              <label class="span-2">Notes
+                <input type="text" name="notes" placeholder="PO #, items, etc." />
+              </label>
+            </div>
+            <div class="actions">
+              <button class="btn primary" type="submit">Save Receipt</button>
+              <button class="btn ghost" type="button" id="btn-cancel-receipt-edit" hidden>Cancel edit</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="row-between">
+            <h2>Saved receipts</h2>
+            <label class="inline">Filter job
+              <select id="receipts-job-filter">
+                <option value="">All jobs</option>
+              </select>
+            </label>
+          </div>
+          <div id="receipts-list" class="receipt-list"></div>
+          <p id="receipts-empty" class="empty-state hidden">No receipts yet.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span>JNH Masonry Inc. · 631-965-1754 · jnhmasonry@gmail.com · jnhmas.com · Licensed &amp; Insured</span>
+      <span class="muted">Data saved in this browser (localStorage)</span>
+    </footer>
+  </div>
+
+  <div id="print-root" class="print-only" aria-hidden="true"></div>
+  <script src="app.js"></script>
+</body>
+</html>
