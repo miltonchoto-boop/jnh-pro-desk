@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book Estimate Appointment · JNH Masonry</title>
+  <meta name="description" content="Schedule a free on-site estimate with JNH Masonry Inc. — Bay Shore & Suffolk County." />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .book-shell { max-width: 720px; margin: 0 auto; padding: 1.25rem 1.1rem 3rem; }
+    .book-hero {
+      text-align: center; padding: 1.5rem 1rem 1.25rem;
+      border: 1px solid var(--border-gold); border-radius: var(--radius);
+      background: linear-gradient(160deg, rgba(212,175,55,.12), transparent 55%), var(--bg-card);
+      box-shadow: var(--shadow); margin-bottom: 1.25rem;
+    }
+    .book-hero img {
+      width: clamp(88px, 22vw, 132px); height: auto; aspect-ratio: 1; object-fit: contain;
+      border-radius: 16px; filter: drop-shadow(0 6px 22px rgba(212,175,55,.35));
+    }
+    .book-hero h1 { margin: .75rem 0 .35rem; color: var(--gold); font-size: clamp(1.35rem, 4vw, 1.85rem); }
+    .book-hero p { margin: 0; color: var(--text-muted); }
+    .book-steps { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin: 1rem 0 0; }
+    .book-steps span {
+      font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted);
+      padding: .3rem .65rem; border-radius: 999px; border: 1px solid var(--border);
+    }
+    .book-steps span.on { color: #1a1408; background: linear-gradient(180deg, #e0c35a, var(--gold-soft)); border-color: var(--gold); font-weight: 700; }
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; margin-top: .75rem;
+    }
+    .cal-grid .dow { text-align: center; font-size: .68rem; color: var(--gold-dim); text-transform: uppercase; letter-spacing: .04em; padding: .25rem; }
+    .cal-day {
+      aspect-ratio: 1; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-input);
+      color: var(--text-muted); cursor: default; font-size: .85rem; display: grid; place-items: center;
+    }
+    .cal-day.open { color: var(--text); cursor: pointer; border-color: var(--border-gold); }
+    .cal-day.open:hover { background: rgba(212,175,55,.12); color: var(--gold); }
+    .cal-day.selected { background: linear-gradient(180deg, #e0c35a, var(--gold-soft)); color: #1a1408; font-weight: 800; border-color: var(--gold); }
+    .cal-day.muted { opacity: .35; }
+    .slot-grid { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .65rem; }
+    .slot-btn {
+      border: 1px solid var(--border); background: var(--bg-elev); color: var(--text);
+      padding: .45rem .75rem; border-radius: 8px; cursor: pointer; font-size: .9rem;
+    }
+    .slot-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+    .slot-btn.selected {
+      background: linear-gradient(180deg, #e0c35a, var(--gold-soft)); color: #1a1408;
+      border-color: var(--gold); font-weight: 700;
+    }
+    .book-success {
+      text-align: center; padding: 1.5rem; border: 1px solid var(--border-gold); border-radius: var(--radius);
+      background: linear-gradient(145deg, rgba(93,207,138,.08), transparent), var(--bg-card);
+    }
+    .book-success h2 { color: var(--ok); margin: 0 0 .5rem; }
+    .book-foot { text-align: center; margin-top: 1.5rem; font-size: .82rem; color: var(--text-muted); }
+    .book-foot a { color: var(--gold); }
+    .embed-mode .book-hero img { width: 72px; }
+    .embed-mode .book-hero { padding: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="book-shell" id="book-root">
+    <header class="book-hero">
+      <img src="jnh-logo-official-cinematic.png" width="1254" height="1254" alt="JNH Masonry Inc." />
+      <h1>Book Estimate Appointment</h1>
+      <p>Free on-site estimate · Licensed &amp; Insured · Bay Shore &amp; Suffolk County</p>
+      <div class="book-steps" id="book-steps">
+        <span data-step="1" class="on">1 · Date</span>
+        <span data-step="2">2 · Time</span>
+        <span data-step="3">3 · Details</span>
+      </div>
+    </header>
+
+    <div id="book-panel" class="card">
+      <div id="step-date">
+        <div class="row-between">
+          <h2 style="margin:0">Pick a date</h2>
+          <div class="actions">
+            <button type="button" class="btn ghost small" id="cal-prev">←</button>
+            <strong id="cal-label" style="color:var(--gold); min-width:9rem; text-align:center"></strong>
+            <button type="button" class="btn ghost small" id="cal-next">→</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <p class="muted" id="date-hint" style="margin-top:.85rem">Open days follow Jose’s availability (Mon–Fri by default). Times are Eastern.</p>
+      </div>
+
+      <div id="step-time" class="hidden">
+        <div class="row-between">
+          <h2 style="margin:0">Pick a time · <span id="time-date-label" style="color:var(--text)"></span></h2>
+          <button type="button" class="btn ghost small" id="back-date">← Date</button>
+        </div>
+        <div class="slot-grid" id="slot-grid"></div>
+        <p id="slots-empty" class="empty-state hidden" style="margin-top:1rem">No open slots that day.</p>
+      </div>
+
+      <div id="step-form" class="hidden">
+        <div class="row-between">
+          <h2 style="margin:0">Your details</h2>
+          <button type="button" class="btn ghost small" id="back-time">← Time</button>
+        </div>
+        <p class="muted" id="summary-slot" style="margin:.35rem 0 1rem"></p>
+        <form id="book-form" class="stack">
+          <div class="grid-2">
+            <label>Full name
+              <input type="text" name="name" required placeholder="Your name" autocomplete="name" />
+            </label>
+            <label>Phone
+              <input type="tel" name="phone" required placeholder="(631) 555-0100" autocomplete="tel" />
+            </label>
+          </div>
+          <label>Project address
+            <input type="text" name="address" required placeholder="Street, Town, NY ZIP" autocomplete="street-address" />
+          </label>
+          <label>Notes (optional)
+            <input type="text" name="notes" placeholder="Gate code, best contact time, project type…" />
+          </label>
+          <div class="actions">
+            <button class="btn primary" type="submit">Confirm appointment</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="step-done" class="hidden">
+        <div class="book-success">
+          <h2>You’re booked</h2>
+          <p id="done-summary" class="muted"></p>
+          <p style="margin:1rem 0 .5rem">Jose will confirm by phone. Need to change something?</p>
+          <div class="actions" style="justify-content:center">
+            <a class="btn primary" href="tel:+16319651754">Call (631) 965-1754</a>
+            <a class="btn ghost" id="done-email" href="#">Email details to Jose</a>
+            <button type="button" class="btn ghost" id="book-another">Book another</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="book-foot">
+      <a href="https://jnhmas.com">jnhmas.com</a> ·
+      <a href="tel:+16319651754">(631) 965-1754</a> ·
+      <a href="mailto:jnhmasonry@gmail.com">jnhmasonry@gmail.com</a><br />
+      <span class="muted">v1 stores your booking in this browser for Pro Desk. Email Jose a copy so he always gets it.</span>
+    </p>
+  </div>
+
+  <script src="booking-store.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    if (location.search.indexOf("embed=1") >= 0) document.body.classList.add("embed-mode");
+
+    var B = window.JNHBooking;
+    var selectedDate = null;
+    var selectedTime = null;
+    var viewYear, viewMonth; // 0-based month
+    var lastAp = null;
+
+    var now = new Date();
+    viewYear = now.getFullYear();
+    viewMonth = now.getMonth();
+
+    function $(s) { return document.querySelector(s); }
+    function setStep(n) {
+      document.querySelectorAll("#book-steps span").forEach(function (el) {
+        el.classList.toggle("on", Number(el.getAttribute("data-step")) === n);
+      });
+      $("#step-date").classList.toggle("hidden", n !== 1);
+      $("#step-time").classList.toggle("hidden", n !== 2);
+      $("#step-form").classList.toggle("hidden", n !== 3);
+      $("#step-done").classList.toggle("hidden", n !== 4);
+    }
+
+    function monthLabel() {
+      return new Date(viewYear, viewMonth, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+    }
+
+    function renderCal() {
+      var avail = B.getAvailability();
+      var bookable = {};
+      B.bookableDates(avail).forEach(function (d) { bookable[d] = true; });
+      $("#cal-label").textContent = monthLabel();
+      var grid = $("#cal-grid");
+      grid.innerHTML = "";
+      ["Su","Mo","Tu","We","Th","Fr","Sa"].forEach(function (d) {
+        var el = document.createElement("div");
+        el.className = "dow";
+        el.textContent = d;
+        grid.appendChild(el);
+      });
+      var first = new Date(viewYear, viewMonth, 1);
+      var startPad = first.getDay();
+      var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+      for (var i = 0; i < startPad; i++) {
+        var empty = document.createElement("div");
+        empty.className = "cal-day muted";
+        empty.textContent = "";
+        grid.appendChild(empty);
+      }
+      for (var day = 1; day <= daysInMonth; day++) {
+        var iso = viewYear + "-" + String(viewMonth + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "cal-day";
+        btn.textContent = String(day);
+        btn.dataset.date = iso;
+        if (bookable[iso]) {
+          btn.classList.add("open");
+          if (iso === selectedDate) btn.classList.add("selected");
+          btn.addEventListener("click", function (e) {
+            selectedDate = e.currentTarget.dataset.date;
+            selectedTime = null;
+            renderCal();
+            openTimeStep();
+          });
+        } else {
+          btn.classList.add("muted");
+          btn.disabled = true;
+        }
+        grid.appendChild(btn);
+      }
+    }
+
+    function openTimeStep() {
+      setStep(2);
+      var d = new Date(selectedDate + "T12:00:00");
+      $("#time-date-label").textContent = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      var slots = B.openSlotsForDate(selectedDate);
+      var grid = $("#slot-grid");
+      grid.innerHTML = "";
+      $("#slots-empty").classList.toggle("hidden", slots.length > 0);
+      slots.forEach(function (t) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "slot-btn" + (t === selectedTime ? " selected" : "");
+        b.textContent = B.formatTimeLabel(t);
+        b.dataset.time = t;
+        b.addEventListener("click", function () {
+          selectedTime = t;
+          openFormStep();
+        });
+        grid.appendChild(b);
+      });
+    }
+
+    function openFormStep() {
+      setStep(3);
+      var d = new Date(selectedDate + "T12:00:00");
+      $("#summary-slot").textContent =
+        d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) +
+        " · " + B.formatTimeLabel(selectedTime) + " (Eastern)";
+    }
+
+    $("#cal-prev").addEventListener("click", function () {
+      viewMonth--;
+      if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+      renderCal();
+    });
+    $("#cal-next").addEventListener("click", function () {
+      viewMonth++;
+      if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+      renderCal();
+    });
+    $("#back-date").addEventListener("click", function () { setStep(1); renderCal(); });
+    $("#back-time").addEventListener("click", openTimeStep);
+
+    $("#book-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var fd = new FormData(e.target);
+      var res = B.bookAppointment({
+        name: fd.get("name"),
+        phone: fd.get("phone"),
+        address: fd.get("address"),
+        notes: fd.get("notes"),
+        date: selectedDate,
+        time: selectedTime,
+        source: location.search.indexOf("embed=1") >= 0 ? "embed" : "public"
+      });
+      if (!res.ok) { alert(res.error); return; }
+      lastAp = res.appointment;
+      setStep(4);
+      var d = new Date(lastAp.date + "T12:00:00");
+      $("#done-summary").innerHTML =
+        "<strong style=\"color:var(--gold)\">" + escapeHtml(lastAp.name) + "</strong><br>" +
+        d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) +
+        " at " + B.formatTimeLabel(lastAp.time) + "<br>" +
+        escapeHtml(lastAp.address) + "<br>" + escapeHtml(lastAp.phone);
+      var body = [
+        "New estimate appointment (jnhmas.com booker)",
+        "",
+        "Name: " + lastAp.name,
+        "Phone: " + lastAp.phone,
+        "Address: " + lastAp.address,
+        "When: " + lastAp.date + " " + lastAp.time + " ET",
+        "Notes: " + (lastAp.notes || "(none)"),
+        "Id: " + lastAp.id
+      ].join("\n");
+      $("#done-email").href = "mailto:jnhmasonry@gmail.com?subject=" +
+        encodeURIComponent("Estimate appointment · " + lastAp.date + " " + lastAp.time) +
+        "&body=" + encodeURIComponent(body);
+    });
+
+    $("#book-another").addEventListener("click", function () {
+      selectedDate = null; selectedTime = null;
+      $("#book-form").reset();
+      setStep(1); renderCal();
+    });
+
+    function escapeHtml(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    setStep(1);
+    renderCal();
+  })();
+  </script>
+</body>
+</html>

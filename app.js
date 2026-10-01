@@ -19,13 +19,17 @@
     priceBook: [],
     settings: null,
     refundStubs: [],
+    appointments: [],
+    availability: null,
     editingEstimateId: null,
     pendingReceiptDataUrl: null,
     pendingReceiptName: null,
     pendingReceiptMime: null,
     editingTimeId: null,
     editingVendorId: null,
-    editingReceiptId: null
+    editingReceiptId: null,
+    apptCalYear: null,
+    apptCalMonth: null
   };
 
   function $(sel, el) { return (el || document).querySelector(sel); }
@@ -94,11 +98,22 @@
       state.settings = data.settings || null;
       state.refundStubs = data.refundStubs || [];
       if (!state.settings) state.settings = { googleReviewUrl: "", stripePublishableKey: "", stripePaymentLinkBase: "", stripeMode: "test", paymentFeeNote: "", absorbFees: false };
+      syncAppointmentsFromStore();
       if (employeeMigrationNeeded) save();
     } catch (e) {
       console.warn("Pro Desk load failed", e);
     }
   }
+  function syncAppointmentsFromStore() {
+    if (window.JNHBooking) {
+      state.appointments = window.JNHBooking.getAppointments();
+      state.availability = window.JNHBooking.getAvailability();
+    } else {
+      state.appointments = state.appointments || [];
+      state.availability = state.availability || null;
+    }
+  }
+
   function save() {
     var data = {
       estimates: state.estimates,
@@ -109,10 +124,22 @@
       priceBook: state.priceBook,
       settings: state.settings,
       refundStubs: state.refundStubs,
+      appointments: state.appointments || (window.JNHBooking ? window.JNHBooking.getAppointments() : []),
+      availability: state.availability || (window.JNHBooking ? window.JNHBooking.getAvailability() : null),
       savedAt: new Date().toISOString()
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      if (window.JNHBooking) {
+        // keep mirror in sync
+        try {
+          localStorage.setItem("jnh_bookings_v1", JSON.stringify({
+            appointments: data.appointments,
+            availability: data.availability,
+            savedAt: data.savedAt
+          }));
+        } catch (e2) {}
+      }
     } catch (e) {
       alert("Could not save (storage full?). Try removing large receipt images.");
       console.error(e);
@@ -126,6 +153,8 @@
       t.classList.toggle("active", t.getAttribute("data-view") === name);
     });
     var map = {
+      hub: "view-hub",
+      appointments: "view-appointments",
       estimates: "view-estimates",
       editor: "view-editor",
       jobs: "view-jobs",
@@ -138,9 +167,11 @@
       vendors: "view-vendors",
       receipts: "view-receipts"
     };
-    var id = map[name] || "view-estimates";
+    var id = map[name] || "view-hub";
     var el = document.getElementById(id);
     if (el) el.classList.add("active");
+    if (name === "hub") renderHub();
+    if (name === "appointments") renderAppointments();
     if (name === "estimates") renderEstimatesList();
     if (name === "jobs") renderJobs();
     if (name === "pricebook") renderPriceBook();
@@ -400,7 +431,40 @@
     else state.estimates.push(est);
     save();
     alert("Estimate saved.");
-    showView("estimates");
+
+    if ($("#btn-hub-refresh")) $("#btn-hub-refresh").addEventListener("click", renderHub);
+    if ($("#avail-form")) $("#avail-form").addEventListener("submit", saveAvailForm);
+    if ($("#appt-filter")) $("#appt-filter").addEventListener("change", renderAppointments);
+    if ($("#appt-cal-prev")) $("#appt-cal-prev").addEventListener("click", function () {
+      if (state.apptCalMonth == null) { var n = new Date(); state.apptCalYear = n.getFullYear(); state.apptCalMonth = n.getMonth(); }
+      state.apptCalMonth--;
+      if (state.apptCalMonth < 0) { state.apptCalMonth = 11; state.apptCalYear--; }
+      renderApptAdminCal();
+    });
+    if ($("#appt-cal-next")) $("#appt-cal-next").addEventListener("click", function () {
+      if (state.apptCalMonth == null) { var n = new Date(); state.apptCalYear = n.getFullYear(); state.apptCalMonth = n.getMonth(); }
+      state.apptCalMonth++;
+      if (state.apptCalMonth > 11) { state.apptCalMonth = 0; state.apptCalYear++; }
+      renderApptAdminCal();
+    });
+    if ($("#btn-add-appointment")) $("#btn-add-appointment").addEventListener("click", function () {
+      $("#manual-appt-card").classList.remove("hidden");
+      var f = $("#manual-appt-form");
+      f.reset(); f.id.value = "";
+      f.date.value = todayISO();
+      f.scrollIntoView({ behavior: "smooth" });
+    });
+    if ($("#btn-cancel-manual-appt")) $("#btn-cancel-manual-appt").addEventListener("click", function () {
+      $("#manual-appt-card").classList.add("hidden");
+    });
+    if ($("#manual-appt-form")) $("#manual-appt-form").addEventListener("submit", saveManualAppointment);
+    if ($("#btn-copy-book-url")) $("#btn-copy-book-url").addEventListener("click", function () {
+      var url = location.origin + location.pathname.replace(/index\.html?$/i, "") + "book.html";
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { alert("Copied: " + url); });
+      else prompt("Booker URL", url);
+    });
+
+    showView("hub");
   }
 
   function printEstimate(est) {
@@ -1489,6 +1553,400 @@
     };
     reader.readAsText(file);
   }
+
+
+  // ========== HUB + APPOINTMENTS ==========
+  function payrollWeekTotals(weekStart) {
+    var onBooks = 0, cash = 0, hoursOn = 0, hoursCash = 0;
+    (state.timeEntries || []).forEach(function (t) {
+      if (!inWeek(t.workDate, weekStart)) return;
+      var amt = (Number(t.hours) || 0) * (Number(t.rate) || 0);
+      var emp = (state.employees || []).find(function (e) { return e.id === t.employeeId; });
+      var payType = emp ? normalizePayType(emp.payType) : PAY_TYPES.ON_BOOKS;
+      if (t.payType) payType = normalizePayType(t.payType);
+      if (payType === PAY_TYPES.CASH) { cash += amt; hoursCash += Number(t.hours) || 0; }
+      else { onBooks += amt; hoursOn += Number(t.hours) || 0; }
+    });
+    return { onBooks: onBooks, cash: cash, hoursOn: hoursOn, hoursCash: hoursCash, total: onBooks + cash };
+  }
+
+  function renderHub() {
+    syncAppointmentsFromStore();
+    var today = todayISO();
+    var weekStart = startOfWeek(today);
+    var openEst = (state.estimates || []).filter(function (e) {
+      return !e.jobStatus || e.jobStatus === "";
+    }).length;
+    var activeJobs = (state.estimates || []).filter(function (e) {
+      return e.jobStatus && e.jobStatus !== "Done";
+    }).length;
+    var upcomingAppt = (state.appointments || []).filter(function (a) {
+      return a.status !== "cancelled" && a.status !== "no-show" && a.status !== "done" && a.date >= today;
+    }).length;
+    var pay = payrollWeekTotals(weekStart);
+    var receiptWeek = (state.receipts || []).filter(function (r) {
+      return r.date && inWeek(r.date, weekStart);
+    });
+    var receiptSum = receiptWeek.reduce(function (s, r) { return s + (Number(r.amount) || 0); }, 0);
+    var vendorCount = (state.vendors || []).length;
+
+    var kpis = [
+      { label: "Open estimates", value: String(openEst), sub: (state.estimates || []).length + " total", goto: "estimates" },
+      { label: "Active jobs", value: String(activeJobs), sub: "Sold → In progress", goto: "jobs" },
+      { label: "Upcoming appts", value: String(upcomingAppt), sub: "Estimate visits", goto: "appointments" },
+      { label: "Payroll owed", value: money(pay.total), sub: "This week", goto: "payroll" },
+      { label: "Vendors", value: String(vendorCount), sub: "Suppliers", goto: "vendors" },
+      { label: "Receipts / wk", value: money(receiptSum), sub: receiptWeek.length + " this week", goto: "receipts" }
+    ];
+    var kpiEl = $("#hub-kpis");
+    if (kpiEl) {
+      kpiEl.innerHTML = kpis.map(function (k) {
+        return '<div class="hub-kpi clickable" data-goto="' + k.goto + '">' +
+          '<div class="label">' + escapeHtml(k.label) + '</div>' +
+          '<div class="value">' + k.value + '</div>' +
+          '<div class="sub">' + escapeHtml(k.sub) + '</div></div>';
+      }).join("");
+      $$(".hub-kpi[data-goto]", kpiEl).forEach(function (el) {
+        el.addEventListener("click", function () { showView(el.getAttribute("data-goto")); });
+      });
+    }
+
+    // Mini kanban
+    var stages = ["Sold", "Scheduled", "In progress", "Done"];
+    var kan = $("#hub-kanban");
+    if (kan) {
+      kan.innerHTML = stages.map(function (st) {
+        var jobs = (state.estimates || []).filter(function (e) { return e.jobStatus === st; });
+        var chips = jobs.slice(0, 4).map(function (e) {
+          var tot = estimateTotals(e);
+          return '<div class="hub-chip" data-id="' + escapeHtml(e.id) + '"><strong>' +
+            escapeHtml(e.customerName || "Untitled") + '</strong><span>' +
+            escapeHtml(e.estimateNumber || "") + " · " + money(tot.grand) + "</span></div>";
+        }).join("") || '<p class="muted" style="font-size:.78rem;margin:.35rem 0">—</p>';
+        if (jobs.length > 4) chips += '<p class="muted" style="font-size:.72rem">+' + (jobs.length - 4) + " more</p>";
+        return '<div class="hub-col"><h3>' + escapeHtml(st) + '<span class="count">' + jobs.length +
+          "</span></h3>" + chips + "</div>";
+      }).join("");
+      $$(".hub-chip[data-id]", kan).forEach(function (el) {
+        el.addEventListener("click", function () {
+          var est = state.estimates.find(function (x) { return x.id === el.getAttribute("data-id"); });
+          if (est) openEditor(est.id);
+        });
+      });
+    }
+
+    // Timeline next 14 days
+    var end = (window.JNHBooking ? window.JNHBooking.addDaysISO(today, 14) : today);
+    var items = [];
+    (state.appointments || []).forEach(function (a) {
+      if (a.status === "cancelled" || a.status === "no-show") return;
+      if (a.date < today || a.date > end) return;
+      items.push({
+        kind: "appt",
+        date: a.date,
+        time: a.time || "09:00",
+        title: a.name,
+        meta: (a.address || "") + (a.phone ? " · " + a.phone : ""),
+        tag: "Estimate appt",
+        id: a.id
+      });
+    });
+    (state.estimates || []).forEach(function (e) {
+      if (!e.jobScheduledDate) return;
+      if (e.jobScheduledDate < today || e.jobScheduledDate > end) return;
+      if (!e.jobStatus || e.jobStatus === "") return;
+      items.push({
+        kind: "job",
+        date: e.jobScheduledDate,
+        time: "08:00",
+        title: e.customerName || "Job",
+        meta: (e.jobStatus || "") + (e.projectAddress ? " · " + e.projectAddress : ""),
+        tag: e.jobStatus || "Job",
+        id: e.id
+      });
+    });
+    items.sort(function (a, b) {
+      var ka = a.date + "T" + a.time;
+      var kb = b.date + "T" + b.time;
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    });
+    var tl = $("#hub-timeline");
+    var tlEmpty = $("#hub-timeline-empty");
+    if (tl) {
+      if (!items.length) {
+        tl.innerHTML = "";
+        if (tlEmpty) tlEmpty.classList.remove("hidden");
+      } else {
+        if (tlEmpty) tlEmpty.classList.add("hidden");
+        tl.innerHTML = items.map(function (it) {
+          var d = new Date(it.date + "T12:00:00");
+          var when = d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+            "<br>" + (window.JNHBooking ? window.JNHBooking.formatTimeLabel(it.time) : it.time);
+          return '<div class="hub-tl-item" data-kind="' + it.kind + '" data-id="' + escapeHtml(it.id) + '">' +
+            '<div class="when">' + when + '</div>' +
+            '<div class="dot ' + (it.kind === "job" ? "job" : "") + '"></div>' +
+            '<div class="body"><strong>' + escapeHtml(it.title) + '</strong>' +
+            '<span class="tag ' + (it.kind === "job" ? "job-tag" : "") + '">' + escapeHtml(it.tag) + "</span>" +
+            '<div class="meta">' + escapeHtml(it.meta) + "</div></div></div>";
+        }).join("");
+        $$(".hub-tl-item", tl).forEach(function (el) {
+          el.addEventListener("click", function () {
+            var kind = el.getAttribute("data-kind");
+            var id = el.getAttribute("data-id");
+            if (kind === "job") openEditor(id);
+            else showView("appointments");
+          });
+        });
+      }
+    }
+
+    // Recent estimates
+    var he = $("#hub-estimates");
+    if (he) {
+      var recent = (state.estimates || []).slice().sort(function (a, b) {
+        return (b.estimateDate || "") < (a.estimateDate || "") ? -1 : 1;
+      }).slice(0, 5);
+      he.innerHTML = recent.length ? recent.map(function (e) {
+        var tot = estimateTotals(e);
+        return '<div class="hub-list-row" data-id="' + escapeHtml(e.id) + '"><span>' +
+          escapeHtml(e.customerName || "Untitled") + "<br><small class=\"muted\">" +
+          escapeHtml(e.estimateDate || "") + "</small></span><span class=\"amt\">" + money(tot.grand) + "</span></div>";
+      }).join("") : '<p class="muted">No estimates yet.</p>';
+      $$(".hub-list-row[data-id]", he).forEach(function (el) {
+        el.addEventListener("click", function () { openEditor(el.getAttribute("data-id")); });
+      });
+    }
+
+    // Payroll block
+    var hp = $("#hub-payroll");
+    if (hp) {
+      hp.innerHTML = '<div class="big">' + money(pay.total) + '</div>' +
+        '<div class="muted">Week of ' + escapeHtml(weekStart) + "</div>" +
+        '<div class="split"><div>On books<strong>' + money(pay.onBooks) + "</strong>" +
+        (pay.hoursOn.toFixed(1)) + " hrs</div><div>Cash<strong>" + money(pay.cash) + "</strong>" +
+        (pay.hoursCash.toFixed(1)) + " hrs</div></div>";
+    }
+
+    // Spend
+    var hs = $("#hub-spend");
+    if (hs) {
+      var rows = receiptWeek.slice().sort(function (a, b) { return (b.date || "") < (a.date || "") ? -1 : 1; }).slice(0, 5);
+      var vendorBits = (state.vendors || []).slice(0, 3).map(function (v) {
+        return escapeHtml(v.name);
+      }).join(", ");
+      hs.innerHTML = '<p class="muted" style="margin:0 0 .5rem">Vendors: ' + (vendorBits || "none yet") +
+        (vendorCount > 3 ? " +" + (vendorCount - 3) : "") + "</p>" +
+        (rows.length ? rows.map(function (r) {
+          return '<div class="hub-list-row"><span>' + escapeHtml(r.vendorName || "Receipt") +
+            "<br><small class=\"muted\">" + escapeHtml(r.date || "") + "</small></span>" +
+            '<span class="amt">' + money(r.amount) + "</span></div>";
+        }).join("") : '<p class="muted">No receipts this week.</p>');
+    }
+
+    $$("[data-goto]").forEach(function (btn) {
+      if (btn.classList.contains("hub-kpi")) return;
+      if (btn._hubBound) return;
+      btn._hubBound = true;
+      btn.addEventListener("click", function () {
+        var g = btn.getAttribute("data-goto");
+        if (g) showView(g);
+      });
+    });
+  }
+
+  function fillAvailForm() {
+    syncAppointmentsFromStore();
+    var a = state.availability || (window.JNHBooking && window.JNHBooking.getAvailability()) || {};
+    var form = $("#avail-form");
+    if (!form) return;
+    form.slotMinutes.value = String(a.slotMinutes || 60);
+    form.maxPerDay.value = a.maxPerDay != null ? a.maxPerDay : 6;
+    form.startHour.value = a.startHour != null ? a.startHour : 9;
+    form.endHour.value = a.endHour != null ? a.endHour : 17;
+    form.lunchStart.value = a.lunchStart != null ? a.lunchStart : 12;
+    form.lunchEnd.value = a.lunchEnd != null ? a.lunchEnd : 13;
+    form.leadDays.value = a.leadDays != null ? a.leadDays : 1;
+    form.horizonDays.value = a.horizonDays != null ? a.horizonDays : 45;
+    form.blockedDates.value = (a.blockedDates || []).join(", ");
+    var days = a.workDays || [1, 2, 3, 4, 5];
+    $$('input[name="dow"]', form).forEach(function (cb) {
+      cb.checked = days.indexOf(Number(cb.value)) >= 0;
+    });
+    var url = location.origin + location.pathname.replace(/index\.html?$/i, "") + "book.html";
+    var hint = $("#booker-url-hint");
+    if (hint) hint.textContent = "Public booker: " + url;
+  }
+
+  function saveAvailForm(e) {
+    e.preventDefault();
+    var form = e.target;
+    var workDays = $$('input[name="dow"]:checked', form).map(function (cb) { return Number(cb.value); });
+    var blocked = String(form.blockedDates.value || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+    var avail = {
+      slotMinutes: Number(form.slotMinutes.value) || 60,
+      maxPerDay: Number(form.maxPerDay.value) || 6,
+      startHour: Number(form.startHour.value),
+      endHour: Number(form.endHour.value),
+      lunchStart: Number(form.lunchStart.value),
+      lunchEnd: Number(form.lunchEnd.value),
+      leadDays: Number(form.leadDays.value) || 0,
+      horizonDays: Number(form.horizonDays.value) || 45,
+      workDays: workDays,
+      blockedDates: blocked,
+      timezoneNote: "America/New_York"
+    };
+    if (window.JNHBooking) window.JNHBooking.setAvailability(avail);
+    state.availability = avail;
+    save();
+    renderAppointments();
+    alert("Availability saved. Public booker will use these hours.");
+  }
+
+  function renderApptAdminCal() {
+    if (!window.JNHBooking) return;
+    var B = window.JNHBooking;
+    if (state.apptCalYear == null) {
+      var n = new Date();
+      state.apptCalYear = n.getFullYear();
+      state.apptCalMonth = n.getMonth();
+    }
+    var y = state.apptCalYear, m = state.apptCalMonth;
+    var label = $("#appt-cal-label");
+    if (label) label.textContent = new Date(y, m, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+    var avail = B.getAvailability();
+    var bookable = {};
+    B.bookableDates(avail).forEach(function (d) { bookable[d] = true; });
+    var counts = {};
+    (state.appointments || []).forEach(function (a) {
+      if (a.status === "cancelled") return;
+      counts[a.date] = (counts[a.date] || 0) + 1;
+    });
+    var grid = $("#appt-cal-grid");
+    if (!grid) return;
+    grid.innerHTML = "";
+    ["Su","Mo","Tu","We","Th","Fr","Sa"].forEach(function (d) {
+      var el = document.createElement("div");
+      el.className = "dow";
+      el.textContent = d;
+      grid.appendChild(el);
+    });
+    var first = new Date(y, m, 1);
+    var pad = first.getDay();
+    var dim = new Date(y, m + 1, 0).getDate();
+    for (var i = 0; i < pad; i++) {
+      var e = document.createElement("div");
+      e.className = "appt-cal-day muted";
+      grid.appendChild(e);
+    }
+    for (var day = 1; day <= dim; day++) {
+      var iso = y + "-" + String(m + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+      var cell = document.createElement("div");
+      cell.className = "appt-cal-day" + (bookable[iso] ? " open" : " muted");
+      cell.innerHTML = "<span>" + day + "</span>" + (counts[iso] ? '<span class="dot-book" title="' + counts[iso] + ' booked"></span>' : "");
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderAppointments() {
+    syncAppointmentsFromStore();
+    fillAvailForm();
+    renderApptAdminCal();
+    var filter = ($("#appt-filter") && $("#appt-filter").value) || "upcoming";
+    var today = todayISO();
+    var list = (state.appointments || []).slice().filter(function (a) {
+      if (filter === "upcoming") return a.date >= today && a.status !== "cancelled" && a.status !== "done";
+      if (filter === "all") return true;
+      return a.status === filter;
+    });
+    var body = $("#appointments-body");
+    var empty = $("#appointments-empty");
+    if (!body) return;
+    if (!list.length) {
+      body.innerHTML = "";
+      if (empty) empty.classList.remove("hidden");
+      return;
+    }
+    if (empty) empty.classList.add("hidden");
+    var B = window.JNHBooking;
+    body.innerHTML = list.map(function (a) {
+      var when = a.date + " · " + (B ? B.formatTimeLabel(a.time) : a.time);
+      return "<tr>" +
+        "<td>" + escapeHtml(when) + "</td>" +
+        "<td>" + escapeHtml(a.name) + (a.notes ? "<br><small class=\"muted\">" + escapeHtml(a.notes) + "</small>" : "") + "</td>" +
+        "<td><a href=\"tel:" + escapeHtml(a.phone) + "\">" + escapeHtml(a.phone) + "</a></td>" +
+        "<td>" + escapeHtml(a.address) + "</td>" +
+        "<td><span class=\"status-pill " + escapeHtml(a.status || "booked") + "\">" + escapeHtml(a.status || "booked") + "</span></td>" +
+        "<td class=\"actions\">" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"confirm\" data-id=\"" + a.id + "\">Confirm</button>" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"done\" data-id=\"" + a.id + "\">Done</button>" +
+          "<button type=\"button\" class=\"btn small danger\" data-act=\"cancel\" data-id=\"" + a.id + "\">Cancel</button>" +
+          "<button type=\"button\" class=\"btn small ghost\" data-act=\"del\" data-id=\"" + a.id + "\">Delete</button>" +
+        "</td></tr>";
+    }).join("");
+    $$("button[data-act]", body).forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-id");
+        var act = btn.getAttribute("data-act");
+        if (act === "del") {
+          if (!confirm("Delete this appointment?")) return;
+          if (window.JNHBooking) window.JNHBooking.deleteAppointment(id);
+        } else if (act === "confirm") {
+          if (window.JNHBooking) window.JNHBooking.updateAppointment(id, { status: "confirmed" });
+        } else if (act === "done") {
+          if (window.JNHBooking) window.JNHBooking.updateAppointment(id, { status: "done" });
+        } else if (act === "cancel") {
+          if (window.JNHBooking) window.JNHBooking.updateAppointment(id, { status: "cancelled" });
+        }
+        syncAppointmentsFromStore();
+        save();
+        renderAppointments();
+      });
+    });
+  }
+
+  function saveManualAppointment(e) {
+    e.preventDefault();
+    var form = e.target;
+    var time = form.time.value; // HH:MM
+    if (time && time.length === 5) { /* ok */ }
+    var payload = {
+      name: form.name.value,
+      phone: form.phone.value,
+      address: form.address.value,
+      notes: form.notes.value,
+      date: form.date.value,
+      time: time,
+      source: "manual"
+    };
+    var existingId = form.id.value;
+    if (existingId && window.JNHBooking) {
+      window.JNHBooking.updateAppointment(existingId, payload);
+    } else if (window.JNHBooking) {
+      // force book even if slot conflicts for manual
+      var list = window.JNHBooking.getAppointments();
+      var ap = {
+        id: "ap_" + Math.random().toString(36).slice(2, 9) + Date.now().toString(36),
+        date: payload.date,
+        time: payload.time,
+        name: payload.name,
+        phone: payload.phone,
+        address: payload.address,
+        notes: payload.notes || "",
+        status: "booked",
+        source: "manual",
+        createdAt: new Date().toISOString()
+      };
+      list.push(ap);
+      window.JNHBooking.saveAppointments(list);
+    }
+    syncAppointmentsFromStore();
+    save();
+    form.reset();
+    form.id.value = "";
+    $("#manual-appt-card").classList.add("hidden");
+    renderAppointments();
+  }
+
 
   // ---------- wire up ----------
   function init() {

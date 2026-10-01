@@ -13,11 +13,13 @@
         <img class="brand-logo" src="jnh-logo-official-cinematic.png" width="1254" height="1254" alt="JNH Masonry Inc. official logo" />
         <div class="brand-text">
           <strong>JNH Masonry Pro Desk</strong>
-          <span>Estimates · Jobs · Payments · Price Book · Reviews</span>
+          <span>Hub · Appointments · Estimates · Jobs · Payroll</span>
         </div>
       </div>
       <nav class="tabs" role="tablist">
-        <button class="tab active" data-view="estimates" type="button">Estimates</button>
+        <button class="tab active" data-view="hub" type="button">Hub</button>
+        <button class="tab" data-view="appointments" type="button">Appointments</button>
+        <button class="tab" data-view="estimates" type="button">Estimates</button>
         <button class="tab" data-view="jobs" type="button">Jobs</button>
         <button class="tab" data-view="pricebook" type="button">Price Book</button>
         <button class="tab" data-view="reviews" type="button">Reviews</button>
@@ -31,8 +33,194 @@
     </header>
 
     <main>
+
+      <!-- PROJECT MANAGEMENT HUB -->
+      <section id="view-hub" class="view active">
+        <div class="panel-head">
+          <div>
+            <h1>Project Hub</h1>
+            <p class="muted">Live snapshot of estimates, jobs, appointments, payroll, and spend — night &amp; gold command center.</p>
+          </div>
+          <div class="actions">
+            <a class="btn ghost" href="book.html" target="_blank" rel="noopener">Public booker ↗</a>
+            <button class="btn primary" id="btn-hub-refresh" type="button">Refresh</button>
+          </div>
+        </div>
+
+        <div class="hub-kpis" id="hub-kpis"></div>
+
+        <div class="hub-grid">
+          <div class="card hub-panel">
+            <div class="row-between">
+              <h2>Jobs board</h2>
+              <button class="btn small ghost" type="button" data-goto="jobs">Open Jobs →</button>
+            </div>
+            <div class="hub-kanban" id="hub-kanban"></div>
+          </div>
+
+          <div class="card hub-panel">
+            <div class="row-between">
+              <h2>Timeline · next 14 days</h2>
+              <button class="btn small ghost" type="button" data-goto="appointments">Appointments →</button>
+            </div>
+            <div class="hub-timeline" id="hub-timeline"></div>
+            <p id="hub-timeline-empty" class="empty-state hidden">No appointments or scheduled jobs in the next two weeks.</p>
+          </div>
+        </div>
+
+        <div class="hub-grid hub-grid-3">
+          <div class="card hub-panel">
+            <div class="row-between"><h2>Estimates</h2><button class="btn small ghost" type="button" data-goto="estimates">All →</button></div>
+            <div id="hub-estimates" class="hub-list"></div>
+          </div>
+          <div class="card hub-panel">
+            <div class="row-between"><h2>Payroll this week</h2><button class="btn small ghost" type="button" data-goto="payroll">Payroll →</button></div>
+            <div id="hub-payroll" class="hub-payroll"></div>
+          </div>
+          <div class="card hub-panel">
+            <div class="row-between"><h2>Vendors &amp; receipts</h2><button class="btn small ghost" type="button" data-goto="receipts">Receipts →</button></div>
+            <div id="hub-spend" class="hub-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- APPOINTMENTS ADMIN -->
+      <section id="view-appointments" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Appointments</h1>
+            <p class="muted">Availability for the public estimate booker + booked on-site appointments.</p>
+          </div>
+          <div class="actions">
+            <a class="btn ghost" id="btn-copy-booker" href="book.html" target="_blank" rel="noopener">Open public booker</a>
+            <button class="btn primary" id="btn-add-appointment" type="button">+ Manual booking</button>
+          </div>
+        </div>
+
+        <div class="hub-grid">
+          <div class="card">
+            <h2>Availability</h2>
+            <form id="avail-form" class="stack">
+              <div class="grid-2">
+                <label>Slot length (minutes)
+                  <select name="slotMinutes">
+                    <option value="30">30</option>
+                    <option value="60" selected>60</option>
+                    <option value="90">90</option>
+                    <option value="120">120</option>
+                  </select>
+                </label>
+                <label>Max bookings / day
+                  <input type="number" name="maxPerDay" min="1" max="20" value="6" />
+                </label>
+                <label>Day starts (hour 0–23)
+                  <input type="number" name="startHour" min="0" max="23" value="9" />
+                </label>
+                <label>Day ends (hour 0–23)
+                  <input type="number" name="endHour" min="1" max="24" value="17" />
+                </label>
+                <label>Lunch start hour
+                  <input type="number" name="lunchStart" min="0" max="23" value="12" />
+                </label>
+                <label>Lunch end hour
+                  <input type="number" name="lunchEnd" min="0" max="24" value="13" />
+                </label>
+                <label>Lead days (soonest bookable)
+                  <input type="number" name="leadDays" min="0" max="30" value="1" />
+                </label>
+                <label>Horizon days (how far ahead)
+                  <input type="number" name="horizonDays" min="7" max="120" value="45" />
+                </label>
+              </div>
+              <fieldset class="avail-days">
+                <legend>Work days</legend>
+                <label class="check"><input type="checkbox" name="dow" value="0" /> Sun</label>
+                <label class="check"><input type="checkbox" name="dow" value="1" checked /> Mon</label>
+                <label class="check"><input type="checkbox" name="dow" value="2" checked /> Tue</label>
+                <label class="check"><input type="checkbox" name="dow" value="3" checked /> Wed</label>
+                <label class="check"><input type="checkbox" name="dow" value="4" checked /> Thu</label>
+                <label class="check"><input type="checkbox" name="dow" value="5" checked /> Fri</label>
+                <label class="check"><input type="checkbox" name="dow" value="6" /> Sat</label>
+              </fieldset>
+              <label>Blocked dates (YYYY-MM-DD, comma-separated)
+                <input type="text" name="blockedDates" placeholder="2026-12-25, 2026-01-01" />
+              </label>
+              <div class="actions">
+                <button class="btn primary" type="submit">Save availability</button>
+                <button class="btn ghost" type="button" id="btn-copy-book-url">Copy booker URL</button>
+              </div>
+              <p class="muted" id="booker-url-hint"></p>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="row-between">
+              <h2>Calendar preview</h2>
+              <div class="actions">
+                <button type="button" class="btn ghost small" id="appt-cal-prev">←</button>
+                <strong id="appt-cal-label" style="color:var(--gold);min-width:9rem;text-align:center"></strong>
+                <button type="button" class="btn ghost small" id="appt-cal-next">→</button>
+              </div>
+            </div>
+            <div class="appt-cal-grid" id="appt-cal-grid"></div>
+            <p class="muted" style="margin-top:.75rem">Gold = open day · dot = has booking</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-between">
+            <h2>Booked estimates</h2>
+            <label class="inline">Filter
+              <select id="appt-filter">
+                <option value="upcoming">Upcoming</option>
+                <option value="all">All</option>
+                <option value="booked">Booked</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="done">Done</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="appointments-table">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Customer</th>
+                  <th>Phone</th>
+                  <th>Address</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="appointments-body"></tbody>
+            </table>
+          </div>
+          <p id="appointments-empty" class="empty-state hidden">No appointments yet. Share the public booker or add one manually.</p>
+        </div>
+
+        <div class="card hidden" id="manual-appt-card">
+          <h2>Manual appointment</h2>
+          <form id="manual-appt-form" class="stack">
+            <input type="hidden" name="id" value="" />
+            <div class="grid-2">
+              <label>Date <input type="date" name="date" required /></label>
+              <label>Time (HH:MM 24h) <input type="time" name="time" required step="1800" /></label>
+              <label>Name <input type="text" name="name" required /></label>
+              <label>Phone <input type="tel" name="phone" required /></label>
+            </div>
+            <label>Address <input type="text" name="address" required /></label>
+            <label>Notes <input type="text" name="notes" /></label>
+            <div class="actions">
+              <button class="btn primary" type="submit">Save</button>
+              <button class="btn ghost" type="button" id="btn-cancel-manual-appt">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
       <!-- ESTIMATES LIST -->
-      <section id="view-estimates" class="view active">
+      <section id="view-estimates" class="view">
         <div class="panel-head">
           <div>
             <h1>Estimates</h1>
@@ -696,6 +884,7 @@
   </div>
 
   <div id="print-root" class="print-only" aria-hidden="true"></div>
+  <script src="booking-store.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

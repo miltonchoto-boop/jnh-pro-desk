@@ -24,6 +24,8 @@ Path: `/workspace/jnh-masonry/pro-desk/index.html`
 
 | Tab | What it does |
 |-----|----------------|
+| **Hub** | Visual project command center — KPIs, jobs kanban, 14-day timeline (appointments + scheduled jobs), payroll & spend snapshot |
+| **Appointments** | Admin availability (days/hours/slots) + booked estimate appointments list; drives public booker |
 | **Estimates** | Customer fields, multi-section Scope of Work, labor+material line items with auto totals, disclosures, payment terms placeholders, print/PDF-ready HTML, JSON save/export/import |
 | **Employees** | Crew roster with hourly pay rates and pay type: On books (NY payroll) or Cash |
 | **Time Log** | Hours per worker / job / day; entries retain the rate used when logged |
@@ -86,6 +88,13 @@ Modeled after `jose-estimate-sample.docx` — numbered scope sections, customer 
 - `index.html` — shell + views
 - `styles.css` — dark night + gold theme
 - `app.js` — all logic (no framework)
+
+## Public estimate booker
+
+- **`book.html`** — customer-facing night+gold scheduler (date → time → name/phone/address).
+- Live: https://miltonchoto-boop.github.io/jnh-pro-desk/book.html
+- Embed: add `?embed=1` for a tighter layout; Carrd can link “Book Estimate” here.
+- Stores appointments in the same `jnh_pro_desk_v1` localStorage (same browser/origin as Pro Desk). Confirmation also offers **mailto** to Jose so bookings aren’t lost across devices (v1).
 
 ## Later
 
