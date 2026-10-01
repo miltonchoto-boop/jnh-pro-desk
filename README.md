@@ -30,6 +30,10 @@ Path: `/workspace/jnh-masonry/pro-desk/index.html`
 | **Weekly Payroll** | Sun–Sat summary split into On books vs Cash totals, with hours and amount owed per person |
 | **Vendors** | Supplier list (category, phone, notes) |
 | **Receipts** | Upload or camera snapshot; attach to vendor + job; **OCR stub** fills fields for manual confirm |
+| **Jobs** | Kanban: Sold → Scheduled → In progress → Done; linked to estimates & time hours |
+| **Price Book** | Cambridge / stone catalog with last cost; add lines to estimates fast |
+| **Reviews** | Google review URL + QR (printed on estimates); editable Place ID link |
+| **Payments** | Stripe-ready: publishable key, Payment Link stubs, deposit/invoice, mark paid, refund stub, fee note |
 
 ## Estimate print header
 
@@ -86,5 +90,5 @@ Modeled after `jose-estimate-sample.docx` — numbered scope sections, customer 
 ## Later
 
 - Optional PIN gate
-- Host static folder and link from Carrd Pro Desk footer
+- Live: https://miltonchoto-boop.github.io/jnh-pro-desk/ — linked from Carrd Pro Desk footer
 - Wire OCR API into `runOcrStub`

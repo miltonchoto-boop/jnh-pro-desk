@@ -13,11 +13,15 @@
         <img class="brand-logo" src="jnh-logo-official-cinematic.png" width="1254" height="1254" alt="JNH Masonry Inc. official logo" />
         <div class="brand-text">
           <strong>JNH Masonry Pro Desk</strong>
-          <span>Estimates · Labor · Vendors · Receipts</span>
+          <span>Estimates · Jobs · Payments · Price Book · Reviews</span>
         </div>
       </div>
       <nav class="tabs" role="tablist">
         <button class="tab active" data-view="estimates" type="button">Estimates</button>
+        <button class="tab" data-view="jobs" type="button">Jobs</button>
+        <button class="tab" data-view="pricebook" type="button">Price Book</button>
+        <button class="tab" data-view="reviews" type="button">Reviews</button>
+        <button class="tab" data-view="payments" type="button">Payments</button>
         <button class="tab" data-view="employees" type="button">Employees</button>
         <button class="tab" data-view="timelog" type="button">Time Log</button>
         <button class="tab" data-view="payroll" type="button">Weekly Payroll</button>
@@ -78,6 +82,39 @@
             <label>Project address
               <input type="text" name="projectAddress" placeholder="Street, City, NY ZIP" />
             </label>
+            <div class="grid-2">
+              <label>Job status
+                <select name="jobStatus">
+                  <option value="">— Estimate only —</option>
+                  <option value="Sold">Sold</option>
+                  <option value="Scheduled">Scheduled</option>
+                  <option value="In progress">In progress</option>
+                  <option value="Done">Done</option>
+                </select>
+              </label>
+              <label>Scheduled / start date
+                <input type="date" name="jobScheduledDate" />
+              </label>
+            </div>
+            <label>Job notes
+              <input type="text" name="jobNotes" placeholder="Crew notes, access codes, material staging…" />
+            </label>
+            <div class="grid-2">
+              <label>Payment status
+                <select name="paymentStatus">
+                  <option value="Unpaid">Unpaid</option>
+                  <option value="Deposit paid">Deposit paid</option>
+                  <option value="Paid in full">Paid in full</option>
+                  <option value="Partial">Partial</option>
+                </select>
+              </label>
+              <label>Amount paid ($)
+                <input type="number" name="amountPaid" min="0" step="0.01" placeholder="0.00" />
+              </label>
+            </div>
+            <label>Stripe / payment link (optional)
+              <input type="url" name="paymentLink" placeholder="https://buy.stripe.com/… or Payment Link URL" />
+            </label>
             <label>Estimate # (optional)
               <input type="text" name="estimateNumber" placeholder="Auto if blank" />
             </label>
@@ -94,7 +131,10 @@
           <div class="card">
             <div class="row-between">
               <h2>Line Items — Labor &amp; Materials</h2>
-              <button class="btn small" id="btn-add-line" type="button">+ Add Line</button>
+              <div class="actions">
+                <button class="btn small" id="btn-add-from-book" type="button">+ From Price Book</button>
+                <button class="btn small" id="btn-add-line" type="button">+ Add Line</button>
+              </div>
             </div>
             <div class="table-wrap">
               <table class="data-table" id="lines-table">
@@ -148,6 +188,207 @@
             </label>
           </div>
         </form>
+      </section>
+
+
+      <!-- JOBS TRACKER -->
+      <section id="view-jobs" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Job Tracker</h1>
+            <p class="muted">Sold → Scheduled → In progress → Done. Linked to estimates and time logged.</p>
+          </div>
+          <div class="actions">
+            <button class="btn ghost" id="btn-jobs-refresh" type="button">Refresh</button>
+          </div>
+        </div>
+        <div class="job-board" id="job-board"></div>
+        <p id="jobs-empty" class="empty-state hidden">No sold jobs yet. Open an estimate and set <strong>Job status</strong> to Sold (or later stages).</p>
+      </section>
+
+      <!-- MATERIAL PRICE BOOK -->
+      <section id="view-pricebook" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Material Price Book</h1>
+            <p class="muted">Cambridge pavers &amp; common stones — last cost for faster estimates. Click a row to add it to the open estimate.</p>
+          </div>
+          <button class="btn primary" id="btn-add-price-item" type="button">+ Add Material</button>
+        </div>
+        <div class="card">
+          <form id="pricebook-form" class="grid-2">
+            <input type="hidden" name="itemId" value="" />
+            <label>Name / SKU
+              <input type="text" name="name" required placeholder="e.g. Cambridge Ledgestone — Basque Blend" />
+            </label>
+            <label>Category
+              <select name="category">
+                <option>Cambridge Pavers</option>
+                <option>Natural Stone</option>
+                <option>Veneer / Cultured Stone</option>
+                <option>Block / Concrete</option>
+                <option>Sand / Base</option>
+                <option>Other</option>
+              </select>
+            </label>
+            <label>Unit
+              <select name="unit">
+                <option>sf</option><option>lf</option><option>ea</option>
+                <option>ton</option><option>bag</option><option>pallet</option><option>ls</option>
+              </select>
+            </label>
+            <label>Last cost ($ / unit)
+              <input type="number" name="lastCost" min="0" step="0.01" required placeholder="0.00" />
+            </label>
+            <label>Vendor
+              <input type="text" name="vendor" placeholder="Dealer / yard" />
+            </label>
+            <label>Last purchased
+              <input type="date" name="lastPurchased" />
+            </label>
+            <label class="span-2">Notes
+              <input type="text" name="notes" placeholder="Color, thickness, pallet coverage…" />
+            </label>
+            <div class="span-2 actions">
+              <button class="btn primary" type="submit">Save Material</button>
+              <button class="btn ghost" type="button" id="btn-cancel-price-edit" hidden>Cancel edit</button>
+            </div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="row-between">
+            <h2>Catalog</h2>
+            <label class="inline">Filter
+              <select id="pricebook-filter">
+                <option value="">All categories</option>
+                <option>Cambridge Pavers</option>
+                <option>Natural Stone</option>
+                <option>Veneer / Cultured Stone</option>
+                <option>Block / Concrete</option>
+                <option>Sand / Base</option>
+                <option>Other</option>
+              </select>
+            </label>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Unit</th>
+                  <th>Last cost</th>
+                  <th>Vendor</th>
+                  <th>Updated</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="pricebook-body"></tbody>
+            </table>
+          </div>
+          <p id="pricebook-empty" class="empty-state hidden">No materials yet.</p>
+        </div>
+      </section>
+
+      <!-- GOOGLE REVIEWS DRIVE -->
+      <section id="view-reviews" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Google Reviews Drive</h1>
+            <p class="muted">QR code + review link for printed estimates and follow-up. Paste your Google review URL below if it changes.</p>
+          </div>
+        </div>
+        <div class="card reviews-drive">
+          <form id="reviews-form" class="stack">
+            <label>Google review URL
+              <input type="url" name="googleReviewUrl" id="google-review-url"
+                placeholder="https://search.google.com/local/writereview?placeid=YOUR_PLACE_ID" />
+            </label>
+            <p class="muted" id="reviews-url-hint">Leave blank to use the built-in JNH placeholder Place ID until confirmed.</p>
+            <div class="actions">
+              <button class="btn primary" type="submit">Save review link</button>
+              <button class="btn ghost" type="button" id="btn-copy-review-link">Copy link</button>
+              <a class="btn ghost" id="btn-open-review" href="#" target="_blank" rel="noopener">Open review page</a>
+            </div>
+          </form>
+          <div class="reviews-qr-panel">
+            <img id="reviews-qr-img" alt="QR code to leave a Google review for JNH Masonry" width="180" height="180" />
+            <div>
+              <h2>Ask for a review</h2>
+              <p class="muted">Customers scan the QR on a printed estimate, or tap the link from Pro Desk. Printed estimates include this QR automatically when a URL is set.</p>
+              <p id="reviews-link-display" class="reviews-link-display"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- PAYMENTS / STRIPE -->
+      <section id="view-payments" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Payments</h1>
+            <p class="muted">Stripe-ready deposit &amp; invoice links. Store your publishable key; mark estimates paid. Live charges need a backend — v1 generates Payment Link stubs and tracks status.</p>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Stripe settings</h2>
+          <form id="stripe-settings-form" class="stack">
+            <label>Stripe publishable key
+              <input type="text" name="stripePublishableKey" id="stripe-pk"
+                placeholder="pk_test_… or pk_live_… (never paste secret keys here)" autocomplete="off" />
+            </label>
+            <label>Default Payment Link base (optional)
+              <input type="url" name="stripePaymentLinkBase" id="stripe-link-base"
+                placeholder="https://buy.stripe.com/your-link — used as template for deposits" />
+            </label>
+            <div class="grid-2">
+              <label>Mode
+                <select name="stripeMode" id="stripe-mode">
+                  <option value="test">Test</option>
+                  <option value="live">Live</option>
+                </select>
+              </label>
+              <label class="check" style="align-self:end">
+                <input type="checkbox" name="absorbFees" id="stripe-absorb-fees" />
+                JNH absorbs card fees (note on invoices)
+              </label>
+            </div>
+            <label>Fee note (shown on estimates / payments)
+              <textarea name="paymentFeeNote" id="stripe-fee-note" rows="2"
+                placeholder="Card payments typically incur ~2.9% + $0.30…"></textarea>
+            </label>
+            <p class="muted">Secret keys and Checkout Sessions / PaymentIntents / Refunds require a server (see Dockerfile later). Pro Desk stores the <strong>publishable</strong> key only, builds deposit &amp; invoice link stubs, tracks paid status, and logs refund stubs locally.</p>
+            <div class="actions">
+              <button class="btn primary" type="submit">Save Stripe settings</button>
+            </div>
+            <div id="payments-integration-path" class="integration-path"></div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="row-between">
+            <h2>Estimates — collect &amp; mark paid</h2>
+            <button class="btn ghost" id="btn-payments-refresh" type="button">Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Estimate</th>
+                  <th>Total</th>
+                  <th>Deposit</th>
+                  <th>Status</th>
+                  <th>Paid</th>
+                  <th>Pay link</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="payments-body"></tbody>
+            </table>
+          </div>
+          <p id="payments-empty" class="empty-state hidden">No estimates yet.</p>
+        </div>
       </section>
 
       <!-- EMPLOYEES -->

@@ -259,3 +259,65 @@ input:focus, select:focus, textarea:focus {
 .print-doc .sign { margin-top: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .print-doc .sign .line { border-top: 1px solid #333; margin-top: 36px; padding-top: 4px; font-size: 9pt; }
 .print-doc.payroll { font-family: var(--font); }
+
+
+/* Jobs board */
+.job-board {
+  display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: .85rem;
+}
+@media (max-width: 960px) {
+  .job-board { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .job-board { grid-template-columns: 1fr; }
+}
+.job-col {
+  background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: .75rem; min-height: 200px;
+}
+.job-col h3 { margin: 0 0 .65rem; font-size: .95rem; color: var(--gold); }
+.job-col-list { display: grid; gap: .55rem; }
+.job-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: .65rem .7rem;
+}
+.job-card h4 { margin: 0 0 .25rem; font-size: .95rem; }
+.job-card .meta { font-size: .78rem; color: var(--text-muted); margin-top: .15rem; }
+.job-card .card-actions { margin-top: .5rem; display: flex; flex-wrap: wrap; gap: .35rem; }
+.job-card select { max-width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; padding: .25rem; }
+
+/* Payments */
+.pay-pill {
+  display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .03em;
+  padding: .15rem .45rem; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--bg-input); color: var(--text-muted);
+}
+.pay-pill.pay-unpaid { border-color: #6a3a3a; color: #f0a0a0; }
+.pay-pill.pay-deposit-paid { border-color: var(--border-gold); color: var(--gold); }
+.pay-pill.pay-paid-in-full { border-color: #2f6b45; color: var(--ok); }
+.pay-pill.pay-partial { border-color: #6a5a2a; color: #e8d48a; }
+.integration-path { margin-top: 1rem; padding: .85rem 1rem; border: 1px dashed var(--border-gold); border-radius: 10px; background: rgba(212,175,55,.05); font-size: .9rem; }
+.integration-path ol { margin: .35rem 0 .5rem 1.2rem; padding: 0; }
+.integration-path li { margin: .25rem 0; }
+
+/* Reviews */
+.reviews-drive .reviews-qr-panel {
+  display: grid; grid-template-columns: 180px 1fr; gap: 1.25rem; align-items: center;
+  margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border);
+}
+@media (max-width: 640px) {
+  .reviews-drive .reviews-qr-panel { grid-template-columns: 1fr; }
+}
+.reviews-drive #reviews-qr-img {
+  width: 180px; height: 180px; border-radius: 12px; background: #fff; padding: 8px;
+  border: 1px solid var(--border);
+}
+.reviews-link-display {
+  word-break: break-all; font-size: .85rem; color: var(--gold-soft);
+}
+
+/* Print extras */
+.print-only .print-review {
+  display: flex; justify-content: space-between; gap: 1rem; align-items: center;
+  margin-top: 1.25rem; padding: .75rem; border: 1px solid #ccc; border-radius: 8px;
+}
+.print-only .print-qr { width: 120px; height: 120px; }

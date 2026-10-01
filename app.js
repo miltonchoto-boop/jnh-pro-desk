@@ -1,4 +1,4 @@
-/* JNH Masonry Pro Desk v1 — estimates, labor, vendors, receipts */
+/* JNH Masonry Pro Desk v1 — estimates, jobs, price book, reviews, payments, labor */
 (function () {
   "use strict";
 
@@ -16,6 +16,9 @@
     timeEntries: [],
     vendors: [],
     receipts: [],
+    priceBook: [],
+    settings: null,
+    refundStubs: [],
     editingEstimateId: null,
     pendingReceiptDataUrl: null,
     pendingReceiptName: null,
@@ -87,6 +90,10 @@
       state.timeEntries = data.timeEntries || [];
       state.vendors = data.vendors || [];
       state.receipts = data.receipts || [];
+      state.priceBook = data.priceBook || [];
+      state.settings = data.settings || null;
+      state.refundStubs = data.refundStubs || [];
+      if (!state.settings) state.settings = { googleReviewUrl: "", stripePublishableKey: "", stripePaymentLinkBase: "", stripeMode: "test", paymentFeeNote: "", absorbFees: false };
       if (employeeMigrationNeeded) save();
     } catch (e) {
       console.warn("Pro Desk load failed", e);
@@ -99,6 +106,9 @@
       timeEntries: state.timeEntries,
       vendors: state.vendors,
       receipts: state.receipts,
+      priceBook: state.priceBook,
+      settings: state.settings,
+      refundStubs: state.refundStubs,
       savedAt: new Date().toISOString()
     };
     try {
@@ -118,6 +128,10 @@
     var map = {
       estimates: "view-estimates",
       editor: "view-editor",
+      jobs: "view-jobs",
+      pricebook: "view-pricebook",
+      reviews: "view-reviews",
+      payments: "view-payments",
       employees: "view-employees",
       timelog: "view-timelog",
       payroll: "view-payroll",
@@ -128,6 +142,10 @@
     var el = document.getElementById(id);
     if (el) el.classList.add("active");
     if (name === "estimates") renderEstimatesList();
+    if (name === "jobs") renderJobs();
+    if (name === "pricebook") renderPriceBook();
+    if (name === "reviews") renderReviews();
+    if (name === "payments") renderPayments();
     if (name === "employees") renderEmployees();
     if (name === "timelog") { fillTimeFormSelects(); renderTimeLog(); }
     if (name === "payroll") renderPayroll();
@@ -172,6 +190,14 @@
       depositNotes: "",
       paymentTerms: "Balance due upon completion unless otherwise agreed.",
       includeDisclosures: true,
+      jobStatus: "",
+      jobScheduledDate: "",
+      jobNotes: "",
+      paymentStatus: "Unpaid",
+      amountPaid: 0,
+      paymentLink: "",
+      paymentLinkKind: "",
+      paymentLinkMemo: "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -197,6 +223,10 @@
         "<h3>" + escapeHtml(est.customerName || "Untitled") + "</h3>" +
         "<div class=\"meta\">" + escapeHtml(est.estimateNumber || "—") + " · " + escapeHtml(est.estimateDate || "") + "</div>" +
         "<div class=\"meta\">" + escapeHtml(est.projectAddress || "No address") + "</div>" +
+        "<div class=\"meta\">" +
+          (est.jobStatus ? "<span class=\"badge\">" + escapeHtml(est.jobStatus) + "</span> " : "") +
+          "<span class=\"pay-pill pay-" + escapeHtml((est.paymentStatus || "Unpaid").replace(/\s+/g, "-").toLowerCase()) + "\">" + escapeHtml(est.paymentStatus || "Unpaid") + "</span>" +
+        "</div>" +
         "<div class=\"price\">" + money(tot.grand) + "</div>" +
         "<div class=\"card-actions\">" +
           "<button type=\"button\" class=\"btn small\" data-act=\"edit\">Edit</button>" +
@@ -245,6 +275,12 @@
     form.depositNotes.value = est.depositNotes || "";
     form.paymentTerms.value = est.paymentTerms || "";
     form.includeDisclosures.checked = est.includeDisclosures !== false;
+    if (form.jobStatus) form.jobStatus.value = est.jobStatus || "";
+    if (form.jobScheduledDate) form.jobScheduledDate.value = est.jobScheduledDate || "";
+    if (form.jobNotes) form.jobNotes.value = est.jobNotes || "";
+    if (form.paymentStatus) form.paymentStatus.value = est.paymentStatus || "Unpaid";
+    if (form.amountPaid) form.amountPaid.value = est.amountPaid || "";
+    if (form.paymentLink) form.paymentLink.value = est.paymentLink || "";
     renderScopeSections(est.sections || []);
     renderLines(est.lines || []);
     recalcTotals();
@@ -343,6 +379,12 @@
     draft.depositNotes = form.depositNotes.value.trim();
     draft.paymentTerms = form.paymentTerms.value.trim();
     draft.includeDisclosures = form.includeDisclosures.checked;
+    if (form.jobStatus) draft.jobStatus = form.jobStatus.value;
+    if (form.jobScheduledDate) draft.jobScheduledDate = form.jobScheduledDate.value;
+    if (form.jobNotes) draft.jobNotes = form.jobNotes.value.trim();
+    if (form.paymentStatus) draft.paymentStatus = form.paymentStatus.value;
+    if (form.amountPaid) draft.amountPaid = parseFloat(form.amountPaid.value) || 0;
+    if (form.paymentLink) draft.paymentLink = form.paymentLink.value.trim();
     draft.updatedAt = new Date().toISOString();
     return draft;
   }
@@ -421,6 +463,13 @@
         "<div><div class=\"line\">Customer Signature / Printed Name / Date</div></div>" +
         "<div><div class=\"line\">Jose Hernandez — JNH Masonry Inc. / Date</div></div>" +
       "</div>" +
+      "<div class=\"print-review\">" +
+        "<div><strong>Happy with our work?</strong><br/>Scan to leave a Google review for JNH Masonry.<br/>" +
+        "<a href=\"" + escapeHtml(effectiveReviewUrl()) + "\">" + escapeHtml(effectiveReviewUrl()) + "</a></div>" +
+        "<img class=\"print-qr\" src=\"" + qrImageUrl(effectiveReviewUrl()) + "\" width=\"120\" height=\"120\" alt=\"Google review QR\" />" +
+      "</div>" +
+      (est.paymentLink ? "<p><strong>Pay online:</strong> <a href=\"" + escapeHtml(est.paymentLink) + "\">" + escapeHtml(est.paymentLink) + "</a></p>" : "") +
+      "<p class=\"muted\" style=\"font-size:11px\">" + escapeHtml((state.settings && state.settings.paymentFeeNote) || "Card payments typically incur processing fees (e.g. Stripe ~2.9% + $0.30).") + "</p>" +
       "<p style=\"margin-top:24px\">We look forward to working with you.<br/>Sincerely,<br/><strong>Jose Hernandez</strong><br/>JNH Masonry Inc.</p>" +
       "</div>";
 
@@ -430,7 +479,432 @@
     window.print();
   }
 
-  // ---------- employees ----------
+  // ========== EXTRA MODULES: jobs, price book, reviews, payments ==========
+  var JOB_STATUSES = ["Sold", "Scheduled", "In progress", "Done"];
+  var DEFAULT_GOOGLE_REVIEW_URL = "https://search.google.com/local/writereview?placeid=ChIJC1ceBG4y6IkRObpjjofxrpQ";
+  var STRIPE_FEE_NOTE = "Card payments typically incur ~2.9% + $0.30 per transaction (Stripe US). Customer or JNH absorbs fees per agreement.";
+
+  function defaultSettings() {
+    return {
+      googleReviewUrl: DEFAULT_GOOGLE_REVIEW_URL,
+      stripePublishableKey: "",
+      stripeSecretKeyHint: "", // never store real secret — placeholder only
+      stripePaymentLinkBase: "",
+      stripeMode: "test",
+      paymentFeeNote: STRIPE_FEE_NOTE,
+      absorbFees: false
+    };
+  }
+
+  function seedPriceBook() {
+    return [
+      { id: uid(), name: "Cambridge Ledgestone — Basque Blend", category: "Cambridge Pavers", unit: "sf", lastCost: 4.85, vendor: "Cambridge dealer", lastPurchased: "", notes: "Typical coverage ~100 sf/pallet", updatedAt: new Date().toISOString() },
+      { id: uid(), name: "Cambridge Cobble — Nickel", category: "Cambridge Pavers", unit: "sf", lastCost: 3.95, vendor: "Cambridge dealer", lastPurchased: "", notes: "", updatedAt: new Date().toISOString() },
+      { id: uid(), name: "Cambridge ArmorTec Hollandstone", category: "Cambridge Pavers", unit: "sf", lastCost: 3.45, vendor: "Cambridge dealer", lastPurchased: "", notes: "", updatedAt: new Date().toISOString() },
+      { id: uid(), name: "Bluestone patio — thermal", category: "Natural Stone", unit: "sf", lastCost: 12.50, vendor: "Stone yard", lastPurchased: "", notes: "1–1.5\"", updatedAt: new Date().toISOString() },
+      { id: uid(), name: "Belgian block — granite", category: "Natural Stone", unit: "ea", lastCost: 4.25, vendor: "Stone yard", lastPurchased: "", notes: "", updatedAt: new Date().toISOString() },
+      { id: uid(), name: "Cultured stone veneer", category: "Veneer / Cultured Stone", unit: "sf", lastCost: 7.80, vendor: "", lastPurchased: "", notes: "", updatedAt: new Date().toISOString() },
+      { id: uid(), name: "CMU block 8\"", category: "Block / Concrete", unit: "ea", lastCost: 2.35, vendor: "Building supply", lastPurchased: "", notes: "", updatedAt: new Date().toISOString() },
+      { id: uid(), name: "Concrete sand", category: "Sand / Base", unit: "ton", lastCost: 48.00, vendor: "Yard", lastPurchased: "", notes: "", updatedAt: new Date().toISOString() },
+      { id: uid(), name: "3/4\" clean stone (RCA/gravel)", category: "Sand / Base", unit: "ton", lastCost: 42.00, vendor: "Yard", lastPurchased: "", notes: "", updatedAt: new Date().toISOString() },
+      { id: uid(), name: "Polymeric sand — joint", category: "Sand / Base", unit: "bag", lastCost: 28.00, vendor: "", lastPurchased: "", notes: "50 lb", updatedAt: new Date().toISOString() }
+    ];
+  }
+
+  function hoursForEstimate(estimateId) {
+    var h = 0;
+    (state.timeEntries || []).forEach(function (t) {
+      if (t.estimateId === estimateId) h += Number(t.hours) || 0;
+    });
+    return h;
+  }
+
+  function effectiveReviewUrl() {
+    var u = (state.settings && state.settings.googleReviewUrl) || "";
+    u = String(u).trim();
+    return u || DEFAULT_GOOGLE_REVIEW_URL;
+  }
+
+  function qrImageUrl(data) {
+    return "https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=" + encodeURIComponent(data);
+  }
+
+  // ----- Jobs -----
+  function renderJobs() {
+    var board = $("#job-board");
+    var empty = $("#jobs-empty");
+    if (!board) return;
+    board.innerHTML = "";
+    var jobs = (state.estimates || []).filter(function (e) {
+      return e.jobStatus && JOB_STATUSES.indexOf(e.jobStatus) >= 0;
+    });
+    if (!jobs.length) {
+      if (empty) empty.classList.remove("hidden");
+      return;
+    }
+    if (empty) empty.classList.add("hidden");
+    JOB_STATUSES.forEach(function (status) {
+      var col = document.createElement("div");
+      col.className = "job-col";
+      var items = jobs.filter(function (j) { return j.jobStatus === status; });
+      col.innerHTML = "<h3>" + escapeHtml(status) + " <span class=\"muted\">(" + items.length + ")</span></h3>";
+      var list = document.createElement("div");
+      list.className = "job-col-list";
+      items.forEach(function (est) {
+        var tot = estimateTotals(est);
+        var hrs = hoursForEstimate(est.id);
+        var card = document.createElement("div");
+        card.className = "job-card";
+        card.innerHTML =
+          "<h4>" + escapeHtml(est.customerName || "Untitled") + "</h4>" +
+          "<div class=\"meta\">" + escapeHtml(est.estimateNumber || "") + " · " + money(tot.grand) + "</div>" +
+          "<div class=\"meta\">" + escapeHtml(est.projectAddress || "") + "</div>" +
+          "<div class=\"meta\">Hours logged: <strong>" + hrs.toFixed(2) + "</strong></div>" +
+          (est.jobScheduledDate ? "<div class=\"meta\">Scheduled: " + escapeHtml(est.jobScheduledDate) + "</div>" : "") +
+          (est.paymentStatus ? "<div class=\"meta\">Pay: " + escapeHtml(est.paymentStatus) + "</div>" : "") +
+          "<div class=\"card-actions\">" +
+            "<select data-act=\"status\">" + JOB_STATUSES.map(function (s) {
+              return "<option value=\"" + s + "\"" + (s === status ? " selected" : "") + ">" + s + "</option>";
+            }).join("") + "</select>" +
+            "<button type=\"button\" class=\"btn small\" data-act=\"open\">Estimate</button>" +
+            "<button type=\"button\" class=\"btn small\" data-act=\"time\">Time</button>" +
+          "</div>";
+        card.querySelector("[data-act=status]").addEventListener("change", function (e) {
+          est.jobStatus = e.target.value;
+          est.updatedAt = new Date().toISOString();
+          save();
+          renderJobs();
+        });
+        card.querySelector("[data-act=open]").addEventListener("click", function () { openEditor(est.id); });
+        card.querySelector("[data-act=time]").addEventListener("click", function () {
+          showView("timelog");
+          setTimeout(function () {
+            var form = $("#time-form");
+            if (form && form.estimateId) form.estimateId.value = est.id;
+          }, 100);
+        });
+        list.appendChild(card);
+      });
+      col.appendChild(list);
+      board.appendChild(col);
+    });
+  }
+
+  // ----- Price book -----
+  function ensurePriceBook() {
+    if (!state.priceBook || !state.priceBook.length) {
+      state.priceBook = seedPriceBook();
+      save();
+    }
+  }
+
+  function renderPriceBook() {
+    ensurePriceBook();
+    var body = $("#pricebook-body");
+    var empty = $("#pricebook-empty");
+    if (!body) return;
+    body.innerHTML = "";
+    var filter = ($("#pricebook-filter") && $("#pricebook-filter").value) || "";
+    var rows = state.priceBook.slice().sort(function (a, b) {
+      return (a.category + a.name).localeCompare(b.category + b.name);
+    });
+    if (filter) rows = rows.filter(function (r) { return r.category === filter; });
+    if (!rows.length) {
+      if (empty) empty.classList.remove("hidden");
+      return;
+    }
+    if (empty) empty.classList.add("hidden");
+    rows.forEach(function (item) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + escapeHtml(item.name) + "</td>" +
+        "<td>" + escapeHtml(item.category) + "</td>" +
+        "<td>" + escapeHtml(item.unit) + "</td>" +
+        "<td>" + money(item.lastCost) + "</td>" +
+        "<td>" + escapeHtml(item.vendor || "—") + "</td>" +
+        "<td class=\"muted\">" + escapeHtml((item.lastPurchased || item.updatedAt || "").slice(0, 10)) + "</td>" +
+        "<td class=\"card-actions\">" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"use\">Use</button>" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"edit\">Edit</button>" +
+          "<button type=\"button\" class=\"btn small danger\" data-act=\"del\">×</button>" +
+        "</td>";
+      tr.querySelector("[data-act=use]").addEventListener("click", function () { addLineFromPriceItem(item); });
+      tr.querySelector("[data-act=edit]").addEventListener("click", function () {
+        var form = $("#pricebook-form");
+        form.itemId.value = item.id;
+        form.name.value = item.name;
+        form.category.value = item.category;
+        form.unit.value = item.unit;
+        form.lastCost.value = item.lastCost;
+        form.vendor.value = item.vendor || "";
+        form.lastPurchased.value = item.lastPurchased || "";
+        form.notes.value = item.notes || "";
+        $("#btn-cancel-price-edit").hidden = false;
+        form.scrollIntoView({ behavior: "smooth" });
+      });
+      tr.querySelector("[data-act=del]").addEventListener("click", function () {
+        if (!confirm("Remove " + item.name + " from price book?")) return;
+        state.priceBook = state.priceBook.filter(function (x) { return x.id !== item.id; });
+        save();
+        renderPriceBook();
+      });
+      body.appendChild(tr);
+    });
+  }
+
+  function addLineFromPriceItem(item) {
+    if (!window.__draftEstimate) {
+      alert("Open an estimate first, then use Price Book → Use (or + From Price Book).");
+      showView("estimates");
+      return;
+    }
+    window.__draftEstimate.lines.push({
+      description: item.name,
+      qty: 1,
+      unit: item.unit || "sf",
+      laborRate: 0,
+      materialCost: Number(item.lastCost) || 0,
+      priceBookId: item.id
+    });
+    renderLines(window.__draftEstimate.lines);
+    recalcTotals();
+    showView("editor");
+  }
+
+  function savePriceItem(e) {
+    e.preventDefault();
+    var form = $("#pricebook-form");
+    var id = form.itemId.value;
+    var item = {
+      id: id || uid(),
+      name: form.name.value.trim(),
+      category: form.category.value,
+      unit: form.unit.value,
+      lastCost: parseFloat(form.lastCost.value) || 0,
+      vendor: form.vendor.value.trim(),
+      lastPurchased: form.lastPurchased.value,
+      notes: form.notes.value.trim(),
+      updatedAt: new Date().toISOString()
+    };
+    if (!item.name) return;
+    ensurePriceBook();
+    var idx = state.priceBook.findIndex(function (x) { return x.id === item.id; });
+    if (idx >= 0) state.priceBook[idx] = item;
+    else state.priceBook.push(item);
+    save();
+    form.reset();
+    form.itemId.value = "";
+    $("#btn-cancel-price-edit").hidden = true;
+    renderPriceBook();
+  }
+
+  function pickFromPriceBook() {
+    ensurePriceBook();
+    if (!window.__draftEstimate) {
+      alert("Open or create an estimate first.");
+      return;
+    }
+    var names = state.priceBook.map(function (p, i) { return (i + 1) + ". " + p.name + " — " + money(p.lastCost) + "/" + p.unit; }).join("\n");
+    var pick = prompt("Enter number to add to estimate:\n\n" + names);
+    var n = parseInt(pick, 10);
+    if (!n || n < 1 || n > state.priceBook.length) return;
+    addLineFromPriceItem(state.priceBook[n - 1]);
+  }
+
+  // ----- Reviews -----
+  function renderReviews() {
+    var url = effectiveReviewUrl();
+    var input = $("#google-review-url");
+    if (input && document.activeElement !== input) input.value = (state.settings && state.settings.googleReviewUrl) || DEFAULT_GOOGLE_REVIEW_URL;
+    var img = $("#reviews-qr-img");
+    if (img) img.src = qrImageUrl(url);
+    var disp = $("#reviews-link-display");
+    if (disp) disp.textContent = url;
+    var open = $("#btn-open-review");
+    if (open) open.href = url;
+  }
+
+  function saveReviewsSettings(e) {
+    e.preventDefault();
+    if (!state.settings) state.settings = defaultSettings();
+    state.settings.googleReviewUrl = $("#google-review-url").value.trim() || DEFAULT_GOOGLE_REVIEW_URL;
+    save();
+    renderReviews();
+    alert("Review link saved. Printed estimates will use this QR/link.");
+  }
+
+  // ----- Payments (Stripe-ready) -----
+  function renderPayments() {
+    if (!state.settings) state.settings = defaultSettings();
+    var pk = $("#stripe-pk");
+    var base = $("#stripe-link-base");
+    if (pk && document.activeElement !== pk) pk.value = state.settings.stripePublishableKey || "";
+    if (base && document.activeElement !== base) base.value = state.settings.stripePaymentLinkBase || "";
+    var mode = $("#stripe-mode");
+    if (mode) mode.value = state.settings.stripeMode || "test";
+    var fee = $("#stripe-fee-note");
+    if (fee) fee.value = state.settings.paymentFeeNote || STRIPE_FEE_NOTE;
+    var absorb = $("#stripe-absorb-fees");
+    if (absorb) absorb.checked = !!state.settings.absorbFees;
+
+    var body = $("#payments-body");
+    var empty = $("#payments-empty");
+    if (!body) return;
+    body.innerHTML = "";
+    if (!state.estimates.length) {
+      if (empty) empty.classList.remove("hidden");
+      return;
+    }
+    if (empty) empty.classList.add("hidden");
+    var sorted = state.estimates.slice().sort(function (a, b) {
+      return (b.estimateDate || "").localeCompare(a.estimateDate || "");
+    });
+    sorted.forEach(function (est) {
+      var tot = estimateTotals(est);
+      var tr = document.createElement("tr");
+      var link = est.paymentLink || "";
+      tr.innerHTML =
+        "<td>" + escapeHtml(est.customerName || "") + "</td>" +
+        "<td>" + escapeHtml(est.estimateNumber || "") + "</td>" +
+        "<td>" + money(tot.grand) + "</td>" +
+        "<td>" + money(est.depositAmount || 0) + "</td>" +
+        "<td><span class=\"pay-pill pay-" + escapeHtml((est.paymentStatus || "Unpaid").replace(/\s+/g, "-").toLowerCase()) + "\">" + escapeHtml(est.paymentStatus || "Unpaid") + "</span></td>" +
+        "<td>" + money(est.amountPaid || 0) + "</td>" +
+        "<td class=\"muted\" style=\"max-width:140px;overflow:hidden;text-overflow:ellipsis\">" + (link ? "<a href=\"" + escapeHtml(link) + "\" target=\"_blank\" rel=\"noopener\">Open</a>" : "—") + "</td>" +
+        "<td class=\"card-actions\">" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"deposit\">Deposit link</button>" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"invoice\">Invoice link</button>" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"mark-dep\">Mark deposit</button>" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"mark-full\">Mark paid</button>" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"refund\">Refund stub</button>" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"edit\">Edit</button>" +
+        "</td>";
+      tr.querySelector("[data-act=deposit]").addEventListener("click", function () { generatePayLink(est, "deposit"); });
+      tr.querySelector("[data-act=invoice]").addEventListener("click", function () { generatePayLink(est, "invoice"); });
+      tr.querySelector("[data-act=mark-dep]").addEventListener("click", function () {
+        est.paymentStatus = "Deposit paid";
+        est.amountPaid = Number(est.depositAmount) || est.amountPaid || 0;
+        est.updatedAt = new Date().toISOString();
+        save(); renderPayments();
+      });
+      tr.querySelector("[data-act=mark-full]").addEventListener("click", function () {
+        est.paymentStatus = "Paid in full";
+        est.amountPaid = tot.grand;
+        est.updatedAt = new Date().toISOString();
+        save(); renderPayments();
+      });
+      tr.querySelector("[data-act=refund]").addEventListener("click", function () { stubRefund(est); });
+      tr.querySelector("[data-act=edit]").addEventListener("click", function () { openEditor(est.id); });
+      body.appendChild(tr);
+    });
+    var path = $("#payments-integration-path");
+    if (path) {
+      path.innerHTML =
+        "<ol>" +
+        "<li>Create a Stripe account and Product/Price (or Payment Link) for deposits &amp; balances.</li>" +
+        "<li>Paste <strong>publishable key</strong> above (pk_test / pk_live). Never store secret keys in this browser app.</li>" +
+        "<li>Optional: paste a Payment Link base URL — Pro Desk stamps estimate # &amp; amount into notes for Jose.</li>" +
+        "<li>Later: add a tiny server (Dockerfile-ready) that creates Checkout Sessions / PaymentIntents with the secret key, then webhooks to mark paid.</li>" +
+        "<li>Refunds: use Stripe Dashboard today; Refund stub logs intent locally until API is wired.</li>" +
+        "</ol>" +
+        "<p class=\"muted\"><strong>Fee note:</strong> " + escapeHtml(state.settings.paymentFeeNote || STRIPE_FEE_NOTE) + "</p>";
+    }
+  }
+
+  function generatePayLink(est, kind) {
+    if (!state.settings) state.settings = defaultSettings();
+    var tot = estimateTotals(est);
+    var amount = kind === "deposit" ? (Number(est.depositAmount) || 0) : tot.grand;
+    if (kind === "deposit" && !amount) {
+      amount = Math.round(tot.grand * 0.3 * 100) / 100;
+      if (!confirm("No deposit set. Use 30% stub (" + money(amount) + ") for link notes?")) return;
+    }
+    var base = (state.settings.stripePaymentLinkBase || "").trim();
+    var pk = (state.settings.stripePublishableKey || "").trim();
+    var memo = "JNH " + (kind === "deposit" ? "DEPOSIT" : "INVOICE") + " · " + (est.estimateNumber || est.id) +
+      " · " + (est.customerName || "") + " · " + money(amount) +
+      " · mode=" + (state.settings.stripeMode || "test");
+    var link;
+    if (base) {
+      var sep = base.indexOf("?") >= 0 ? "&" : "?";
+      link = base + sep + "client_reference_id=" + encodeURIComponent(est.estimateNumber || est.id) +
+        "&prefilled_amount_hint=" + encodeURIComponent(String(amount));
+    } else {
+      // Stub path — no live charge without Stripe Payment Link / Checkout API
+      link = "https://dashboard.stripe.com/payment-links" +
+        (pk ? "?notice=configure-link-for-" + encodeURIComponent(est.estimateNumber || "est") : "");
+      alert(
+        "Stripe Payment Link stub\n\n" + memo + "\n\n" +
+        (pk ? "Publishable key on file: " + pk.slice(0, 12) + "…\n" : "No publishable key saved yet — add it under Payments settings.\n") +
+        "\n" + (state.settings.paymentFeeNote || STRIPE_FEE_NOTE) + "\n\n" +
+        "Open Stripe → Payment Links (or Checkout) to create a real link, then paste it on the estimate’s Payment link field.\n\n" +
+        "Stub dashboard URL will be saved on this estimate for reference."
+      );
+    }
+    est.paymentLink = link;
+    est.paymentLinkKind = kind;
+    est.paymentLinkMemo = memo;
+    est.updatedAt = new Date().toISOString();
+    save();
+    renderPayments();
+    if (base) {
+      try { window.open(link, "_blank", "noopener"); } catch (err) {}
+      alert("Pay link saved on estimate.\n\n" + memo + "\n\n" + (state.settings.paymentFeeNote || STRIPE_FEE_NOTE));
+    }
+  }
+
+  function stubRefund(est) {
+    var amt = prompt("Refund stub — amount to record (does not charge Stripe yet):", String(est.amountPaid || 0));
+    if (amt == null) return;
+    var n = parseFloat(amt);
+    if (isNaN(n) || n < 0) { alert("Invalid amount"); return; }
+    if (!state.refundStubs) state.refundStubs = [];
+    state.refundStubs.push({
+      id: uid(),
+      estimateId: est.id,
+      estimateNumber: est.estimateNumber,
+      customerName: est.customerName,
+      amount: n,
+      createdAt: new Date().toISOString(),
+      status: "stub-pending-api",
+      note: "Process in Stripe Dashboard or wire Refunds API on server"
+    });
+    if (n >= (Number(est.amountPaid) || 0)) {
+      est.paymentStatus = "Unpaid";
+      est.amountPaid = 0;
+    } else {
+      est.paymentStatus = "Partial";
+      est.amountPaid = Math.max(0, (Number(est.amountPaid) || 0) - n);
+    }
+    est.updatedAt = new Date().toISOString();
+    save();
+    renderPayments();
+    alert("Refund stub recorded locally ($" + n.toFixed(2) + "). Complete the refund in Stripe Dashboard until the OCR/API server handles Refunds.");
+  }
+
+  function saveStripeSettings(e) {
+    e.preventDefault();
+    if (!state.settings) state.settings = defaultSettings();
+    state.settings.stripePublishableKey = ($("#stripe-pk") && $("#stripe-pk").value.trim()) || "";
+    state.settings.stripePaymentLinkBase = ($("#stripe-link-base") && $("#stripe-link-base").value.trim()) || "";
+    var mode = $("#stripe-mode");
+    if (mode) state.settings.stripeMode = mode.value || "test";
+    var fee = $("#stripe-fee-note");
+    if (fee) state.settings.paymentFeeNote = fee.value.trim() || STRIPE_FEE_NOTE;
+    var absorb = $("#stripe-absorb-fees");
+    if (absorb) state.settings.absorbFees = !!absorb.checked;
+    if (/sk_(test|live)_/i.test(state.settings.stripePublishableKey)) {
+      alert("That looks like a secret key. Only publishable keys (pk_…) belong in Pro Desk.");
+      state.settings.stripePublishableKey = "";
+      if ($("#stripe-pk")) $("#stripe-pk").value = "";
+    }
+    save();
+    renderPayments();
+    alert("Stripe settings saved (publishable key + link base only).");
+  }
+
+
+    // ---------- employees ----------
   function renderEmployees() {
     var body = $("#employees-body");
     var empty = $("#employees-empty");
@@ -1099,6 +1573,30 @@
       $("#btn-run-ocr").disabled = true;
     });
     $("#receipts-job-filter").addEventListener("change", renderReceipts);
+
+    if ($("#btn-jobs-refresh")) $("#btn-jobs-refresh").addEventListener("click", renderJobs);
+    if ($("#pricebook-form")) $("#pricebook-form").addEventListener("submit", savePriceItem);
+    if ($("#btn-add-price-item")) $("#btn-add-price-item").addEventListener("click", function () {
+      var f = $("#pricebook-form"); if (f) { f.reset(); f.itemId.value = ""; $("#btn-cancel-price-edit").hidden = true; f.name.focus(); }
+    });
+    if ($("#btn-cancel-price-edit")) $("#btn-cancel-price-edit").addEventListener("click", function () {
+      var f = $("#pricebook-form"); f.reset(); f.itemId.value = ""; this.hidden = true;
+    });
+    if ($("#pricebook-filter")) $("#pricebook-filter").addEventListener("change", renderPriceBook);
+    if ($("#btn-add-from-book")) $("#btn-add-from-book").addEventListener("click", pickFromPriceBook);
+
+    if ($("#reviews-form")) $("#reviews-form").addEventListener("submit", saveReviewsSettings);
+    if ($("#btn-copy-review-link")) $("#btn-copy-review-link").addEventListener("click", function () {
+      var u = effectiveReviewUrl();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(function () { alert("Copied review link"); });
+      else prompt("Copy review link:", u);
+    });
+
+    if ($("#stripe-settings-form")) $("#stripe-settings-form").addEventListener("submit", saveStripeSettings);
+    if ($("#btn-payments-refresh")) $("#btn-payments-refresh").addEventListener("click", renderPayments);
+
+    if (!state.settings) state.settings = { googleReviewUrl: "https://search.google.com/local/writereview?placeid=ChIJC1ceBG4y6IkRObpjjofxrpQ", stripePublishableKey: "", stripePaymentLinkBase: "", stripeMode: "test", paymentFeeNote: "Card payments typically incur ~2.9% + $0.30 per transaction (Stripe US). Customer or JNH absorbs fees per agreement.", absorbFees: false };
+    ensurePriceBook();
 
     showView("estimates");
   }
