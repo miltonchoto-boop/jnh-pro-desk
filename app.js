@@ -19,6 +19,12 @@
     priceBook: [],
     settings: null,
     refundStubs: [],
+    insuranceDocs: [],
+    fleetAssets: [],
+    fleetMaintLogs: [],
+    marketingClients: [],
+    marketingBlasts: [],
+    clientFlows: [],
     appointments: [],
     availability: null,
     editingEstimateId: null,
@@ -97,7 +103,14 @@
       state.priceBook = data.priceBook || [];
       state.settings = data.settings || null;
       state.refundStubs = data.refundStubs || [];
-      if (!state.settings) state.settings = { googleReviewUrl: "", stripePublishableKey: "", stripePaymentLinkBase: "", stripeMode: "test", paymentFeeNote: "", absorbFees: false };
+      state.insuranceDocs = data.insuranceDocs || [];
+      state.fleetAssets = data.fleetAssets || [];
+      state.fleetMaintLogs = data.fleetMaintLogs || [];
+      state.marketingClients = data.marketingClients || [];
+      state.marketingBlasts = data.marketingBlasts || [];
+      state.clientFlows = data.clientFlows || [];
+      if (!state.settings) state.settings = { googleReviewUrl: "", stripePublishableKey: "", stripePaymentLinkBase: "", stripeMode: "test", paymentFeeNote: "", absorbFees: false, deskPassword: "jnh2026" };
+      if (state.settings && !state.settings.deskPassword) state.settings.deskPassword = "jnh2026";
       syncAppointmentsFromStore();
       if (employeeMigrationNeeded) save();
     } catch (e) {
@@ -124,6 +137,12 @@
       priceBook: state.priceBook,
       settings: state.settings,
       refundStubs: state.refundStubs,
+      insuranceDocs: state.insuranceDocs || [],
+      fleetAssets: state.fleetAssets || [],
+      fleetMaintLogs: state.fleetMaintLogs || [],
+      marketingClients: state.marketingClients || [],
+      marketingBlasts: state.marketingBlasts || [],
+      clientFlows: state.clientFlows || [],
       appointments: state.appointments || (window.JNHBooking ? window.JNHBooking.getAppointments() : []),
       availability: state.availability || (window.JNHBooking ? window.JNHBooking.getAvailability() : null),
       savedAt: new Date().toISOString()
@@ -159,13 +178,18 @@
       editor: "view-editor",
       jobs: "view-jobs",
       pricebook: "view-pricebook",
+      insurance: "view-insurance",
+      fleet: "view-fleet",
+      marketing: "view-marketing",
+      flow: "view-flow",
       reviews: "view-reviews",
       payments: "view-payments",
       employees: "view-employees",
       timelog: "view-timelog",
       payroll: "view-payroll",
       vendors: "view-vendors",
-      receipts: "view-receipts"
+      receipts: "view-receipts",
+      settings: "view-settings"
     };
     var id = map[name] || "view-hub";
     var el = document.getElementById(id);
@@ -182,6 +206,11 @@
     if (name === "payroll") renderPayroll();
     if (name === "vendors") renderVendors();
     if (name === "receipts") { fillReceiptSelects(); renderReceipts(); }
+    if (name === "insurance") renderInsurance();
+    if (name === "fleet") renderFleet();
+    if (name === "marketing") renderMarketing();
+    if (name === "flow") renderFlow();
+    if (name === "editor") renderEstimateInsuranceAttach();
   }
 
   // ---------- estimates ----------
@@ -221,6 +250,7 @@
       depositNotes: "",
       paymentTerms: "Balance due upon completion unless otherwise agreed.",
       includeDisclosures: true,
+      insuranceDocIds: [],
       jobStatus: "",
       jobScheduledDate: "",
       jobNotes: "",
@@ -306,6 +336,8 @@
     form.depositNotes.value = est.depositNotes || "";
     form.paymentTerms.value = est.paymentTerms || "";
     form.includeDisclosures.checked = est.includeDisclosures !== false;
+    if (!Array.isArray(est.insuranceDocIds)) est.insuranceDocIds = [];
+    if (window.__draftEstimate && !Array.isArray(window.__draftEstimate.insuranceDocIds)) window.__draftEstimate.insuranceDocIds = est.insuranceDocIds.slice();
     if (form.jobStatus) form.jobStatus.value = est.jobStatus || "";
     if (form.jobScheduledDate) form.jobScheduledDate.value = est.jobScheduledDate || "";
     if (form.jobNotes) form.jobNotes.value = est.jobNotes || "";
@@ -316,6 +348,7 @@
     renderLines(est.lines || []);
     recalcTotals();
     showView("editor");
+    renderEstimateInsuranceAttach();
   }
 
   function renderScopeSections(sections) {
@@ -410,6 +443,11 @@
     draft.depositNotes = form.depositNotes.value.trim();
     draft.paymentTerms = form.paymentTerms.value.trim();
     draft.includeDisclosures = form.includeDisclosures.checked;
+    if (window.__draftEstimate && Array.isArray(window.__draftEstimate.insuranceDocIds)) {
+      draft.insuranceDocIds = window.__draftEstimate.insuranceDocIds.slice();
+    } else if (!Array.isArray(draft.insuranceDocIds)) {
+      draft.insuranceDocIds = [];
+    }
     if (form.jobStatus) draft.jobStatus = form.jobStatus.value;
     if (form.jobScheduledDate) draft.jobScheduledDate = form.jobScheduledDate.value;
     if (form.jobNotes) draft.jobNotes = form.jobNotes.value.trim();
@@ -431,40 +469,7 @@
     else state.estimates.push(est);
     save();
     alert("Estimate saved.");
-
-    if ($("#btn-hub-refresh")) $("#btn-hub-refresh").addEventListener("click", renderHub);
-    if ($("#avail-form")) $("#avail-form").addEventListener("submit", saveAvailForm);
-    if ($("#appt-filter")) $("#appt-filter").addEventListener("change", renderAppointments);
-    if ($("#appt-cal-prev")) $("#appt-cal-prev").addEventListener("click", function () {
-      if (state.apptCalMonth == null) { var n = new Date(); state.apptCalYear = n.getFullYear(); state.apptCalMonth = n.getMonth(); }
-      state.apptCalMonth--;
-      if (state.apptCalMonth < 0) { state.apptCalMonth = 11; state.apptCalYear--; }
-      renderApptAdminCal();
-    });
-    if ($("#appt-cal-next")) $("#appt-cal-next").addEventListener("click", function () {
-      if (state.apptCalMonth == null) { var n = new Date(); state.apptCalYear = n.getFullYear(); state.apptCalMonth = n.getMonth(); }
-      state.apptCalMonth++;
-      if (state.apptCalMonth > 11) { state.apptCalMonth = 0; state.apptCalYear++; }
-      renderApptAdminCal();
-    });
-    if ($("#btn-add-appointment")) $("#btn-add-appointment").addEventListener("click", function () {
-      $("#manual-appt-card").classList.remove("hidden");
-      var f = $("#manual-appt-form");
-      f.reset(); f.id.value = "";
-      f.date.value = todayISO();
-      f.scrollIntoView({ behavior: "smooth" });
-    });
-    if ($("#btn-cancel-manual-appt")) $("#btn-cancel-manual-appt").addEventListener("click", function () {
-      $("#manual-appt-card").classList.add("hidden");
-    });
-    if ($("#manual-appt-form")) $("#manual-appt-form").addEventListener("submit", saveManualAppointment);
-    if ($("#btn-copy-book-url")) $("#btn-copy-book-url").addEventListener("click", function () {
-      var url = location.origin + location.pathname.replace(/index\.html?$/i, "") + "book.html";
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { alert("Copied: " + url); });
-      else prompt("Booker URL", url);
-    });
-
-    showView("hub");
+    renderEstimatesList();
   }
 
   function printEstimate(est) {
@@ -482,12 +487,17 @@
     }).join("");
     var disc = "";
     if (est.includeDisclosures !== false) {
-      disc =
-        "<div class=\"disc\"><h3>Disclosures</h3><ul>" +
-        "<li>JNH Masonry Inc. is not responsible for material shipping delays, shortages, or carrier situations outside our control.</li>" +
-        "<li>JNH Masonry Inc. is not responsible for manufacturer material performance, color variation, or product defects beyond the manufacturer’s warranty.</li>" +
-        "<li>Estimate is valid for 30 days unless otherwise noted. Work begins after signed acceptance and required deposit.</li>" +
-        "</ul></div>";
+      disc = disclosureHtml();
+      var attached = (est.insuranceDocIds || []).map(function (id) {
+        return (state.insuranceDocs || []).find(function (d) { return d.id === id; });
+      }).filter(Boolean);
+      if (attached.length) {
+        disc += "<div class=\"disc\"><h3>Insurance on file</h3><ul>" +
+          attached.map(function (d) {
+            return "<li>" + escapeHtml(d.label || d.docType) + " — expires " + escapeHtml(d.expiryDate || "?") +
+              (d.carrier ? " (" + escapeHtml(d.carrier) + ")" : "") + "</li>";
+          }).join("") + "</ul></div>";
+      }
     }
     var pay =
       "<h3>Payment Schedule</h3>" +
@@ -543,6 +553,1035 @@
     window.print();
   }
 
+/* ===== PRO DESK ADDONS: auth, insurance, fleet, marketing ===== */
+  var DEFAULT_DESK_PASSWORD = "jnh2026";
+  var AUTH_SESSION_KEY = "jnh_pro_desk_unlocked";
+
+  function ensureSettingsShape() {
+    if (!state.settings) state.settings = defaultSettings();
+    if (!state.settings.deskPassword) state.settings.deskPassword = DEFAULT_DESK_PASSWORD;
+    if (!Array.isArray(state.insuranceDocs)) state.insuranceDocs = [];
+    if (!Array.isArray(state.fleetAssets)) state.fleetAssets = [];
+    if (!Array.isArray(state.fleetMaintLogs)) state.fleetMaintLogs = [];
+    if (!Array.isArray(state.marketingClients)) state.marketingClients = [];
+    if (!Array.isArray(state.marketingBlasts)) state.marketingBlasts = [];
+    if (!Array.isArray(state.clientFlows)) state.clientFlows = [];
+  }
+
+  function isDeskUnlocked() {
+    try { return sessionStorage.getItem(AUTH_SESSION_KEY) === "1"; } catch (e) { return false; }
+  }
+  function setDeskUnlocked(on) {
+    try {
+      if (on) sessionStorage.setItem(AUTH_SESSION_KEY, "1");
+      else sessionStorage.removeItem(AUTH_SESSION_KEY);
+    } catch (e) {}
+  }
+  function getDeskPassword() {
+    ensureSettingsShape();
+    return state.settings.deskPassword || DEFAULT_DESK_PASSWORD;
+  }
+  function applyGateUI() {
+    var gate = $("#gate");
+    var app = $("#app");
+    if (!gate || !app) return;
+    if (isDeskUnlocked()) {
+      gate.classList.add("hidden");
+      gate.setAttribute("hidden", "");
+      app.hidden = false;
+      app.classList.remove("app-locked");
+      app.removeAttribute("hidden");
+    } else {
+      gate.classList.remove("hidden");
+      gate.removeAttribute("hidden");
+      app.hidden = true;
+      app.classList.add("app-locked");
+      app.setAttribute("hidden", "");
+    }
+  }
+  function lockDesk() {
+    setDeskUnlocked(false);
+    applyGateUI();
+    var inp = $("#gate-password");
+    if (inp) { inp.value = ""; setTimeout(function () { inp.focus(); }, 50); }
+  }
+  function tryUnlock(pw) {
+    if (String(pw || "") === getDeskPassword()) {
+      setDeskUnlocked(true);
+      applyGateUI();
+      var err = $("#gate-error");
+      if (err) err.classList.add("hidden");
+      return true;
+    }
+    var err2 = $("#gate-error");
+    if (err2) err2.classList.remove("hidden");
+    return false;
+  }
+  function bindAuthUI() {
+    var form = $("#gate-form");
+    if (form) form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      tryUnlock(($("#gate-password") || {}).value);
+    });
+    if ($("#btn-lock-desk")) $("#btn-lock-desk").addEventListener("click", lockDesk);
+    if ($("#btn-lock-from-settings")) $("#btn-lock-from-settings").addEventListener("click", lockDesk);
+    if ($("#password-settings-form")) $("#password-settings-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      ensureSettingsShape();
+      var cur = ($("#settings-current-password") || {}).value || "";
+      var neu = ($("#settings-new-password") || {}).value || "";
+      var conf = ($("#settings-confirm-password") || {}).value || "";
+      var msg = $("#password-settings-msg");
+      if (cur !== getDeskPassword()) {
+        if (msg) msg.textContent = "Current password is incorrect.";
+        return;
+      }
+      if (neu.length < 4) {
+        if (msg) msg.textContent = "New password must be at least 4 characters.";
+        return;
+      }
+      if (neu !== conf) {
+        if (msg) msg.textContent = "New password and confirmation do not match.";
+        return;
+      }
+      state.settings.deskPassword = neu;
+      save();
+      if (msg) msg.textContent = "Password updated. Use the new password next time you unlock.";
+      e.target.reset();
+    });
+  }
+
+  function disclosureHtml() {
+    return (
+      "<div class=\"disc\"><h3>Disclosures (NYS / Suffolk County–oriented)</h3>" +
+      "<p style=\"font-size:8.5pt;color:#666\"><strong>Informational only — not legal advice.</strong> Contractor-style notices for home-improvement estimates in New York / Suffolk County. Confirm license numbers and required contract language with counsel or local requirements.</p>" +
+      "<ul>" +
+      "<li><strong>License &amp; insurance:</strong> JNH Masonry Inc. represents that it is licensed and insured for home-improvement / masonry work as applicable in New York State and Suffolk County. Ask for current license ID and Certificate of Insurance (COI) before work begins.</li>" +
+      "<li><strong>Payment terms:</strong> Deposit and progress / final payments are as stated in this estimate. Work generally begins after signed acceptance and any required deposit. Card / online payments may incur processing fees as noted.</li>" +
+      "<li><strong>Cancellation rights (if applicable):</strong> Certain New York home-improvement contracts may give the customer a limited right to cancel within a stated period (often three business days) after signing, and/or other statutory notices. If that law applies to your project, the customer’s cancellation rights are in addition to any terms here. This estimate does not waive rights the law requires.</li>" +
+      "<li><strong>Material shipping:</strong> JNH Masonry Inc. is not responsible for material shipping delays, shortages, or carrier situations outside our control.</li>" +
+      "<li><strong>Material / manufacturer performance:</strong> JNH Masonry Inc. is not responsible for manufacturer material performance, color variation, or product defects beyond the manufacturer’s warranty.</li>" +
+      "<li><strong>Validity:</strong> Estimate is valid for 30 days unless otherwise noted.</li>" +
+      "</ul></div>"
+    );
+  }
+
+  function daysUntil(dateStr) {
+    if (!dateStr) return null;
+    var d = new Date(dateStr + "T12:00:00");
+    var now = new Date();
+    now.setHours(12, 0, 0, 0);
+    return Math.round((d - now) / 86400000);
+  }
+  function expiryBadge(dateStr) {
+    var d = daysUntil(dateStr);
+    if (d == null) return "";
+    if (d < 0) return "<span class=\"ins-badge expired\">Expired</span>";
+    if (d <= 30) return "<span class=\"ins-badge soon\">Expires in " + d + "d</span>";
+    return "<span class=\"ins-badge ok\">OK</span>";
+  }
+  function fillInsuranceEstimateSelect() {
+    var sel = $("#insurance-estimate-select");
+    if (!sel) return;
+    var cur = sel.value;
+    sel.innerHTML = "<option value=\"\">— None / company-wide —</option>";
+    (state.estimates || []).slice().sort(function (a, b) {
+      return (b.estimateDate || "").localeCompare(a.estimateDate || "");
+    }).forEach(function (e) {
+      var o = document.createElement("option");
+      o.value = e.id;
+      o.textContent = (e.customerName || "Untitled") + " · " + (e.estimateNumber || e.id.slice(-6));
+      sel.appendChild(o);
+    });
+    if (cur) sel.value = cur;
+  }
+  function renderInsurance() {
+    ensureSettingsShape();
+    fillInsuranceEstimateSelect();
+    var list = $("#insurance-list");
+    var empty = $("#insurance-empty");
+    if (!list) return;
+    list.innerHTML = "";
+    var docs = state.insuranceDocs || [];
+    if (!docs.length) {
+      if (empty) empty.classList.remove("hidden");
+      return;
+    }
+    if (empty) empty.classList.add("hidden");
+    docs.slice().sort(function (a, b) {
+      return (a.expiryDate || "").localeCompare(b.expiryDate || "");
+    }).forEach(function (doc) {
+      var est = (state.estimates || []).find(function (e) { return e.id === doc.estimateId; });
+      var row = document.createElement("div");
+      row.className = "ins-row";
+      row.innerHTML =
+        "<div class=\"ins-main\">" +
+          "<strong>" + escapeHtml(doc.label || doc.docType) + "</strong> " + expiryBadge(doc.expiryDate) +
+          "<div class=\"meta\">" + escapeHtml(doc.docType || "") +
+            (doc.carrier ? " · " + escapeHtml(doc.carrier) : "") +
+            (doc.policyNumber ? " · #" + escapeHtml(doc.policyNumber) : "") +
+          "</div>" +
+          "<div class=\"meta\">Expires " + escapeHtml(doc.expiryDate || "—") +
+            (est ? " · Job: " + escapeHtml(est.customerName || "") : " · Company-wide") +
+          "</div>" +
+          (doc.fileName ? "<div class=\"meta\">File: " + escapeHtml(doc.fileName) + "</div>" : "") +
+        "</div>" +
+        "<div class=\"card-actions\">" +
+          (doc.dataUrl ? "<a class=\"btn small ghost\" href=\"" + doc.dataUrl + "\" download=\"" + escapeHtml(doc.fileName || "coi") + "\" target=\"_blank\" rel=\"noopener\">Open</a>" : "") +
+          "<button type=\"button\" class=\"btn small\" data-act=\"edit\">Edit</button>" +
+          "<button type=\"button\" class=\"btn small danger\" data-act=\"del\">Delete</button>" +
+        "</div>";
+      row.querySelector("[data-act=edit]").addEventListener("click", function () { openInsuranceEditor(doc.id); });
+      row.querySelector("[data-act=del]").addEventListener("click", function () {
+        if (!confirm("Delete insurance document “" + (doc.label || "") + "”?")) return;
+        state.insuranceDocs = state.insuranceDocs.filter(function (d) { return d.id !== doc.id; });
+        (state.estimates || []).forEach(function (e) {
+          if (Array.isArray(e.insuranceDocIds)) e.insuranceDocIds = e.insuranceDocIds.filter(function (id) { return id !== doc.id; });
+        });
+        save();
+        renderInsurance();
+        renderEstimateInsuranceAttach();
+      });
+      list.appendChild(row);
+    });
+  }
+  var pendingInsFile = null;
+  function openInsuranceEditor(id) {
+    ensureSettingsShape();
+    fillInsuranceEstimateSelect();
+    var form = $("#insurance-form");
+    if (!form) return;
+    var doc = id ? state.insuranceDocs.find(function (d) { return d.id === id; }) : null;
+    form.reset();
+    pendingInsFile = null;
+    $("#insurance-file-preview").textContent = "";
+    if (doc) {
+      form.docId.value = doc.id;
+      form.label.value = doc.label || "";
+      form.docType.value = doc.docType || "COI";
+      form.carrier.value = doc.carrier || "";
+      form.policyNumber.value = doc.policyNumber || "";
+      form.effectiveDate.value = doc.effectiveDate || "";
+      form.expiryDate.value = doc.expiryDate || "";
+      form.estimateId.value = doc.estimateId || "";
+      form.notes.value = doc.notes || "";
+      if (doc.fileName) $("#insurance-file-preview").textContent = "Current file: " + doc.fileName + " (choose a new file to replace)";
+      $("#insurance-form-title").textContent = "Edit insurance document";
+      $("#btn-cancel-insurance-edit").hidden = false;
+      pendingInsFile = doc.dataUrl ? { dataUrl: doc.dataUrl, fileName: doc.fileName, mime: doc.mime } : null;
+    } else {
+      form.docId.value = "";
+      $("#insurance-form-title").textContent = "Add insurance document";
+      $("#btn-cancel-insurance-edit").hidden = true;
+    }
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function saveInsuranceDoc(e) {
+    e.preventDefault();
+    ensureSettingsShape();
+    var form = e.target;
+    var id = form.docId.value || uid();
+    var existing = state.insuranceDocs.find(function (d) { return d.id === id; });
+    var fileMeta = pendingInsFile || (existing ? { dataUrl: existing.dataUrl, fileName: existing.fileName, mime: existing.mime } : null);
+    var doc = {
+      id: id,
+      label: form.label.value.trim(),
+      docType: form.docType.value,
+      carrier: form.carrier.value.trim(),
+      policyNumber: form.policyNumber.value.trim(),
+      effectiveDate: form.effectiveDate.value,
+      expiryDate: form.expiryDate.value,
+      estimateId: form.estimateId.value || "",
+      notes: form.notes.value.trim(),
+      fileName: fileMeta ? fileMeta.fileName : "",
+      mime: fileMeta ? fileMeta.mime : "",
+      dataUrl: fileMeta ? fileMeta.dataUrl : "",
+      updatedAt: new Date().toISOString()
+    };
+    if (existing) {
+      var idx = state.insuranceDocs.indexOf(existing);
+      state.insuranceDocs[idx] = doc;
+    } else {
+      doc.createdAt = new Date().toISOString();
+      state.insuranceDocs.push(doc);
+    }
+    // sync attachment onto estimate
+    (state.estimates || []).forEach(function (est) {
+      if (!Array.isArray(est.insuranceDocIds)) est.insuranceDocIds = [];
+      var has = est.insuranceDocIds.indexOf(doc.id) >= 0;
+      if (doc.estimateId === est.id && !has) est.insuranceDocIds.push(doc.id);
+      if (doc.estimateId !== est.id && has && existing && existing.estimateId === est.id) {
+        est.insuranceDocIds = est.insuranceDocIds.filter(function (x) { return x !== doc.id; });
+      }
+    });
+    save();
+    form.reset();
+    form.docId.value = "";
+    pendingInsFile = null;
+    $("#insurance-file-preview").textContent = "";
+    $("#btn-cancel-insurance-edit").hidden = true;
+    $("#insurance-form-title").textContent = "Add insurance document";
+    renderInsurance();
+    renderEstimateInsuranceAttach();
+    alert("Insurance document saved.");
+  }
+  function renderEstimateInsuranceAttach() {
+    var wrap = $("#estimate-insurance-attach");
+    if (!wrap) return;
+    ensureSettingsShape();
+    var draft = window.__draftEstimate;
+    if (!draft) { wrap.innerHTML = "<p class=\"muted\">Open or create an estimate to attach docs.</p>"; return; }
+    if (!Array.isArray(draft.insuranceDocIds)) draft.insuranceDocIds = [];
+    var html = "";
+    (state.insuranceDocs || []).forEach(function (doc) {
+      var checked = draft.insuranceDocIds.indexOf(doc.id) >= 0 || doc.estimateId === draft.id;
+      html += "<label class=\"check ins-check\">" +
+        "<input type=\"checkbox\" data-ins-id=\"" + escapeHtml(doc.id) + "\" " + (checked ? "checked" : "") + " /> " +
+        escapeHtml(doc.label || doc.docType) + " <span class=\"muted\">(exp " + escapeHtml(doc.expiryDate || "?") + ")</span>" +
+        "</label>";
+    });
+    if (!html) html = "<p class=\"muted\">No insurance docs uploaded yet. Add them under the Insurance tab.</p>";
+    wrap.innerHTML = html;
+    $$("input[data-ins-id]", wrap).forEach(function (cb) {
+      cb.addEventListener("change", function () {
+        var id = cb.getAttribute("data-ins-id");
+        if (!Array.isArray(draft.insuranceDocIds)) draft.insuranceDocIds = [];
+        if (cb.checked) {
+          if (draft.insuranceDocIds.indexOf(id) < 0) draft.insuranceDocIds.push(id);
+        } else {
+          draft.insuranceDocIds = draft.insuranceDocIds.filter(function (x) { return x !== id; });
+        }
+      });
+    });
+  }
+
+  // ----- Fleet / Equipment -----
+  function renderFleet() {
+    ensureSettingsShape();
+    var list = $("#fleet-list");
+    var empty = $("#fleet-empty");
+    if (!list) return;
+    list.innerHTML = "";
+    var assets = state.fleetAssets || [];
+    if (!assets.length) {
+      if (empty) empty.classList.remove("hidden");
+    } else {
+      if (empty) empty.classList.add("hidden");
+    }
+    assets.slice().sort(function (a, b) {
+      return (a.name || "").localeCompare(b.name || "");
+    }).forEach(function (a) {
+      var logs = (state.fleetMaintLogs || []).filter(function (l) { return l.assetId === a.id; })
+        .sort(function (x, y) { return (y.date || "").localeCompare(x.date || ""); });
+      var last = logs[0];
+      var row = document.createElement("div");
+      row.className = "fleet-row";
+      row.innerHTML =
+        "<div class=\"fleet-main\">" +
+          "<strong>" + escapeHtml(a.name) + "</strong> <span class=\"status-pill\">" + escapeHtml(a.kind || "Equipment") + "</span>" +
+          "<div class=\"meta\">" +
+            (a.year ? escapeHtml(String(a.year)) + " " : "") +
+            escapeHtml(a.make || "") + " " + escapeHtml(a.model || "") +
+            (a.plateOrSerial ? " · " + escapeHtml(a.plateOrSerial) : "") +
+          "</div>" +
+          "<div class=\"meta\">Purchased " + escapeHtml(a.purchaseDate || "—") +
+            " · Cost " + money(a.purchaseCost) +
+            (last ? " · Last service " + escapeHtml(last.date) + " (" + escapeHtml(last.kind) + ")" : "") +
+          "</div>" +
+        "</div>" +
+        "<div class=\"card-actions\">" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"maint\">Log service</button>" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"edit\">Edit</button>" +
+          "<button type=\"button\" class=\"btn small danger\" data-act=\"del\">Delete</button>" +
+        "</div>" +
+        "<div class=\"fleet-logs\" data-logs></div>";
+      var logsEl = row.querySelector("[data-logs]");
+      if (logs.length) {
+        logsEl.innerHTML = "<h4>Maintenance &amp; repairs</h4>" + logs.slice(0, 8).map(function (l) {
+          return "<div class=\"fleet-log\">" + escapeHtml(l.date) + " · <strong>" + escapeHtml(l.kind) + "</strong> · " +
+            money(l.cost) + (l.vendor ? " · " + escapeHtml(l.vendor) : "") +
+            (l.notes ? "<div class=\"meta\">" + escapeHtml(l.notes) + "</div>" : "") +
+            " <button type=\"button\" class=\"btn small danger\" data-log-del=\"" + escapeHtml(l.id) + "\">×</button></div>";
+        }).join("");
+        $$("[data-log-del]", logsEl).forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var lid = btn.getAttribute("data-log-del");
+            state.fleetMaintLogs = state.fleetMaintLogs.filter(function (x) { return x.id !== lid; });
+            save();
+            renderFleet();
+          });
+        });
+      }
+      row.querySelector("[data-act=edit]").addEventListener("click", function () { openFleetEditor(a.id); });
+      row.querySelector("[data-act=maint]").addEventListener("click", function () { openMaintForm(a.id); });
+      row.querySelector("[data-act=del]").addEventListener("click", function () {
+        if (!confirm("Delete “" + a.name + "” and its maintenance logs?")) return;
+        state.fleetAssets = state.fleetAssets.filter(function (x) { return x.id !== a.id; });
+        state.fleetMaintLogs = state.fleetMaintLogs.filter(function (x) { return x.assetId !== a.id; });
+        save();
+        renderFleet();
+      });
+      list.appendChild(row);
+    });
+    fillFleetAssetSelect();
+  }
+  function fillFleetAssetSelect() {
+    var sel = $("#maint-asset-select");
+    if (!sel) return;
+    var cur = sel.value;
+    sel.innerHTML = "";
+    (state.fleetAssets || []).forEach(function (a) {
+      var o = document.createElement("option");
+      o.value = a.id;
+      o.textContent = a.name + " (" + (a.kind || "") + ")";
+      sel.appendChild(o);
+    });
+    if (cur) sel.value = cur;
+  }
+  function openFleetEditor(id) {
+    var form = $("#fleet-form");
+    if (!form) return;
+    var a = id ? state.fleetAssets.find(function (x) { return x.id === id; }) : null;
+    form.reset();
+    if (a) {
+      form.assetId.value = a.id;
+      form.kind.value = a.kind || "Vehicle";
+      form.name.value = a.name || "";
+      form.year.value = a.year || "";
+      form.make.value = a.make || "";
+      form.model.value = a.model || "";
+      form.plateOrSerial.value = a.plateOrSerial || "";
+      form.purchaseDate.value = a.purchaseDate || "";
+      form.purchaseCost.value = a.purchaseCost || "";
+      form.notes.value = a.notes || "";
+      $("#fleet-form-title").textContent = "Edit asset";
+      $("#btn-cancel-fleet-edit").hidden = false;
+    } else {
+      form.assetId.value = "";
+      $("#fleet-form-title").textContent = "Add vehicle / equipment";
+      $("#btn-cancel-fleet-edit").hidden = true;
+    }
+  }
+  function saveFleetAsset(e) {
+    e.preventDefault();
+    ensureSettingsShape();
+    var form = e.target;
+    var id = form.assetId.value || uid();
+    var existing = state.fleetAssets.find(function (x) { return x.id === id; });
+    var asset = {
+      id: id,
+      kind: form.kind.value,
+      name: form.name.value.trim(),
+      year: form.year.value.trim(),
+      make: form.make.value.trim(),
+      model: form.model.value.trim(),
+      plateOrSerial: form.plateOrSerial.value.trim(),
+      purchaseDate: form.purchaseDate.value,
+      purchaseCost: Number(form.purchaseCost.value) || 0,
+      notes: form.notes.value.trim(),
+      updatedAt: new Date().toISOString()
+    };
+    if (existing) {
+      state.fleetAssets[state.fleetAssets.indexOf(existing)] = Object.assign({}, existing, asset);
+    } else {
+      asset.createdAt = new Date().toISOString();
+      state.fleetAssets.push(asset);
+    }
+    save();
+    form.reset();
+    form.assetId.value = "";
+    $("#btn-cancel-fleet-edit").hidden = true;
+    $("#fleet-form-title").textContent = "Add vehicle / equipment";
+    renderFleet();
+  }
+  function openMaintForm(assetId) {
+    var card = $("#maint-form-card");
+    var form = $("#maint-form");
+    if (!card || !form) return;
+    fillFleetAssetSelect();
+    card.classList.remove("hidden");
+    form.reset();
+    if (assetId) form.assetId.value = assetId;
+    form.date.value = todayISO();
+    form.scrollIntoView({ behavior: "smooth" });
+  }
+  function saveMaintLog(e) {
+    e.preventDefault();
+    ensureSettingsShape();
+    var form = e.target;
+    if (!form.assetId.value) { alert("Select an asset."); return; }
+    state.fleetMaintLogs.push({
+      id: uid(),
+      assetId: form.assetId.value,
+      date: form.date.value || todayISO(),
+      kind: form.kind.value,
+      cost: Number(form.cost.value) || 0,
+      vendor: form.vendor.value.trim(),
+      odometer: form.odometer.value.trim(),
+      notes: form.notes.value.trim(),
+      createdAt: new Date().toISOString()
+    });
+    save();
+    form.reset();
+    $("#maint-form-card").classList.add("hidden");
+    renderFleet();
+  }
+
+  // ----- Mass marketing -----
+  function syncMarketingClientsFromEstimates() {
+    ensureSettingsShape();
+    var byKey = {};
+    (state.marketingClients || []).forEach(function (c) { byKey[(c.email || "") + "|" + (c.phone || "")] = c; });
+    (state.estimates || []).forEach(function (e) {
+      var email = (e.customerEmail || "").trim();
+      var phone = (e.customerPhone || "").trim();
+      if (!email && !phone) return;
+      var key = email + "|" + phone;
+      if (!byKey[key]) {
+        var c = {
+          id: uid(),
+          name: e.customerName || "",
+          email: email,
+          phone: phone,
+          source: "estimate",
+          optInEmail: !!email,
+          optInSms: !!phone,
+          notes: "",
+          createdAt: new Date().toISOString()
+        };
+        state.marketingClients.push(c);
+        byKey[key] = c;
+      }
+    });
+  }
+  function renderMarketing() {
+    ensureSettingsShape();
+    syncMarketingClientsFromEstimates();
+    var list = $("#marketing-clients");
+    var empty = $("#marketing-clients-empty");
+    if (!list) return;
+    list.innerHTML = "";
+    var clients = state.marketingClients || [];
+    if (!clients.length) {
+      if (empty) empty.classList.remove("hidden");
+    } else if (empty) empty.classList.add("hidden");
+    clients.slice().sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); }).forEach(function (c) {
+      var row = document.createElement("div");
+      row.className = "mkt-row";
+      row.innerHTML =
+        "<label class=\"check\"><input type=\"checkbox\" data-mkt-id=\"" + escapeHtml(c.id) + "\" class=\"mkt-pick\" /></label>" +
+        "<div class=\"mkt-main\">" +
+          "<strong>" + escapeHtml(c.name || "—") + "</strong>" +
+          "<div class=\"meta\">" + escapeHtml(c.email || "no email") + " · " + escapeHtml(c.phone || "no phone") +
+            " · " + escapeHtml(c.source || "") + "</div>" +
+          "<div class=\"meta\">Email " + (c.optInEmail ? "✓" : "✗") + " · SMS " + (c.optInSms ? "✓" : "✗") + "</div>" +
+        "</div>" +
+        "<div class=\"card-actions\">" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"edit\">Edit</button>" +
+          "<button type=\"button\" class=\"btn small danger\" data-act=\"del\">Delete</button>" +
+        "</div>";
+      row.querySelector("[data-act=edit]").addEventListener("click", function () { openMarketingClient(c.id); });
+      row.querySelector("[data-act=del]").addEventListener("click", function () {
+        if (!confirm("Remove " + (c.name || "client") + " from marketing list?")) return;
+        state.marketingClients = state.marketingClients.filter(function (x) { return x.id !== c.id; });
+        save();
+        renderMarketing();
+      });
+      list.appendChild(row);
+    });
+    renderBlastHistory();
+  }
+  function openMarketingClient(id) {
+    var form = $("#mkt-client-form");
+    if (!form) return;
+    var c = id ? state.marketingClients.find(function (x) { return x.id === id; }) : null;
+    form.reset();
+    if (c) {
+      form.clientId.value = c.id;
+      form.name.value = c.name || "";
+      form.email.value = c.email || "";
+      form.phone.value = c.phone || "";
+      form.optInEmail.checked = !!c.optInEmail;
+      form.optInSms.checked = !!c.optInSms;
+      form.notes.value = c.notes || "";
+      $("#btn-cancel-mkt-client").hidden = false;
+    } else {
+      form.clientId.value = "";
+      form.optInEmail.checked = true;
+      form.optInSms.checked = true;
+      $("#btn-cancel-mkt-client").hidden = true;
+    }
+  }
+  function saveMarketingClient(e) {
+    e.preventDefault();
+    ensureSettingsShape();
+    var form = e.target;
+    var id = form.clientId.value || uid();
+    var existing = state.marketingClients.find(function (x) { return x.id === id; });
+    var c = {
+      id: id,
+      name: form.name.value.trim(),
+      email: form.email.value.trim(),
+      phone: form.phone.value.trim(),
+      optInEmail: !!form.optInEmail.checked,
+      optInSms: !!form.optInSms.checked,
+      notes: form.notes.value.trim(),
+      source: existing ? (existing.source || "manual") : "manual",
+      updatedAt: new Date().toISOString()
+    };
+    if (existing) {
+      state.marketingClients[state.marketingClients.indexOf(existing)] = Object.assign({}, existing, c);
+    } else {
+      c.createdAt = new Date().toISOString();
+      state.marketingClients.push(c);
+    }
+    save();
+    form.reset();
+    form.clientId.value = "";
+    $("#btn-cancel-mkt-client").hidden = true;
+    renderMarketing();
+  }
+  function selectedMarketingIds() {
+    return $$(".mkt-pick:checked").map(function (cb) { return cb.getAttribute("data-mkt-id"); });
+  }
+  function stubSendBlast(e) {
+    e.preventDefault();
+    ensureSettingsShape();
+    var form = e.target;
+    var channel = form.channel.value;
+    var subject = (form.subject && form.subject.value || "").trim();
+    var body = form.body.value.trim();
+    if (!body) { alert("Message body required."); return; }
+    var ids = selectedMarketingIds();
+    var targets = (state.marketingClients || []).filter(function (c) {
+      if (ids.length && ids.indexOf(c.id) < 0) return false;
+      if (channel === "email") return c.optInEmail && c.email;
+      if (channel === "sms") return c.optInSms && c.phone;
+      return (c.optInEmail && c.email) || (c.optInSms && c.phone);
+    });
+    if (!targets.length) {
+      alert("No matching opted-in clients. Select clients or add contacts with email/phone.");
+      return;
+    }
+    var blast = {
+      id: uid(),
+      channel: channel,
+      subject: subject,
+      body: body,
+      recipientCount: targets.length,
+      recipients: targets.map(function (t) { return { id: t.id, name: t.name, email: t.email, phone: t.phone }; }),
+      status: "stubbed",
+      createdAt: new Date().toISOString(),
+      note: "Stub only — wire Twilio / email API later. Nothing was sent."
+    };
+    state.marketingBlasts.unshift(blast);
+    if (state.marketingBlasts.length > 50) state.marketingBlasts.length = 50;
+    save();
+    alert("Blast stubbed for " + targets.length + " recipient(s) via " + channel + ".\n\nNothing was actually sent (Twilio / email API not connected yet).\n\nPreview saved under Blast history.");
+    renderBlastHistory();
+  }
+  function renderBlastHistory() {
+    var el = $("#blast-history");
+    if (!el) return;
+    var blasts = state.marketingBlasts || [];
+    if (!blasts.length) {
+      el.innerHTML = "<p class=\"muted\">No blast stubs yet.</p>";
+      return;
+    }
+    el.innerHTML = blasts.slice(0, 20).map(function (b) {
+      return "<div class=\"blast-row\"><strong>" + escapeHtml(b.channel.toUpperCase()) + "</strong> · " +
+        escapeHtml((b.createdAt || "").slice(0, 16).replace("T", " ")) +
+        " · " + b.recipientCount + " recipients · <span class=\"status-pill\">" + escapeHtml(b.status) + "</span>" +
+        (b.subject ? "<div class=\"meta\">Subject: " + escapeHtml(b.subject) + "</div>" : "") +
+        "<div class=\"meta\">" + escapeHtml((b.body || "").slice(0, 160)) + ((b.body || "").length > 160 ? "…" : "") + "</div>" +
+        "<div class=\"meta\">" + escapeHtml(b.note || "") + "</div></div>";
+    }).join("");
+  }
+
+  // ----- Client flow / pipeline / Gantt -----
+  var FLOW_STAGES = [
+    { id: "lead", label: "Lead", group: "sales" },
+    { id: "estimate", label: "Estimate", group: "sales" },
+    { id: "sale", label: "Sale", group: "sales" },
+    { id: "design", label: "Design", group: "job" },
+    { id: "materials", label: "Material purchase", group: "job" },
+    { id: "delivery", label: "Delivery arrival", group: "job" },
+    { id: "job", label: "Job / install", group: "job" },
+    { id: "done", label: "Complete", group: "job" },
+    { id: "claim", label: "Claim (ins/warranty)", group: "claim" }
+  ];
+
+  function blankFlow(estimateId) {
+    var stages = {};
+    FLOW_STAGES.forEach(function (s) {
+      stages[s.id] = { status: "pending", startDate: "", endDate: "", notes: "" };
+    });
+    stages.lead.status = "done";
+    stages.lead.startDate = todayISO();
+    stages.estimate.status = "active";
+    stages.estimate.startDate = todayISO();
+    return {
+      estimateId: estimateId || "",
+      stages: stages,
+      jobDaysPlanned: 0,
+      jobDaysActual: 0,
+      claimEnabled: false,
+      claimType: "",
+      issues: [],
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  function ensureFlowForEstimate(est) {
+    ensureSettingsShape();
+    if (!Array.isArray(state.clientFlows)) state.clientFlows = [];
+    var flow = state.clientFlows.find(function (f) { return f.estimateId === est.id; });
+    if (!flow) {
+      flow = blankFlow(est.id);
+      if (est.estimateDate) {
+        flow.stages.estimate.startDate = est.estimateDate;
+        flow.stages.lead.startDate = est.estimateDate;
+      }
+      if (est.jobStatus === "Sold" || est.jobStatus === "Scheduled" || est.jobStatus === "In progress" || est.jobStatus === "Done") {
+        flow.stages.estimate.status = "done";
+        flow.stages.sale.status = "done";
+        flow.stages.sale.startDate = est.estimateDate || todayISO();
+      }
+      if (est.jobStatus === "Scheduled") { flow.stages.design.status = "active"; }
+      if (est.jobStatus === "In progress") {
+        ["design", "materials", "delivery"].forEach(function (id) { flow.stages[id].status = "done"; });
+        flow.stages.job.status = "active";
+        flow.stages.job.startDate = est.jobScheduledDate || todayISO();
+      }
+      if (est.jobStatus === "Done") {
+        FLOW_STAGES.forEach(function (s) {
+          if (s.id !== "claim") flow.stages[s.id].status = "done";
+        });
+      }
+      state.clientFlows.push(flow);
+    }
+    return flow;
+  }
+
+  function flowProgress(flow) {
+    var stages = FLOW_STAGES.filter(function (s) {
+      return s.id !== "claim" || flow.claimEnabled;
+    });
+    var done = 0;
+    stages.forEach(function (s) {
+      var st = (flow.stages[s.id] && flow.stages[s.id].status) || "pending";
+      if (st === "done") done += 1;
+      else if (st === "active") done += 0.5;
+    });
+    return { done: done, total: stages.length, pct: stages.length ? Math.round((done / stages.length) * 100) : 0 };
+  }
+
+  function renderFlow() {
+    ensureSettingsShape();
+    if (!Array.isArray(state.clientFlows)) state.clientFlows = [];
+    var list = $("#flow-clients");
+    var gantt = $("#flow-gantt");
+    var empty = $("#flow-empty");
+    if (!list) return;
+
+    var estimates = (state.estimates || []).slice().sort(function (a, b) {
+      return (b.estimateDate || "").localeCompare(a.estimateDate || "");
+    });
+    estimates.forEach(ensureFlowForEstimate);
+
+    list.innerHTML = "";
+    if (!estimates.length) {
+      if (empty) empty.classList.remove("hidden");
+      if (gantt) gantt.innerHTML = "";
+      return;
+    }
+    if (empty) empty.classList.add("hidden");
+
+    // Gantt overview
+    if (gantt) {
+      var header = "<div class=\"gantt-header\"><span class=\"gantt-name\">Client</span><div class=\"gantt-tracks\">" +
+        FLOW_STAGES.map(function (s) { return "<span class=\"gantt-col\" title=\"" + escapeHtml(s.label) + "\">" + escapeHtml(s.label.split(" ")[0]) + "</span>"; }).join("") +
+        "</div></div>";
+      var rows = estimates.map(function (est) {
+        var flow = ensureFlowForEstimate(est);
+        var prog = flowProgress(flow);
+        var cells = FLOW_STAGES.map(function (s) {
+          if (s.id === "claim" && !flow.claimEnabled) return "<span class=\"gantt-cell skip\" title=\"Claim off\">—</span>";
+          var st = (flow.stages[s.id] && flow.stages[s.id].status) || "pending";
+          return "<span class=\"gantt-cell " + st + "\" title=\"" + escapeHtml(s.label) + ": " + st + "\"></span>";
+        }).join("");
+        return "<div class=\"gantt-row\" data-est=\"" + escapeHtml(est.id) + "\">" +
+          "<span class=\"gantt-name\">" + escapeHtml(est.customerName || "Untitled") +
+          " <span class=\"muted\">" + prog.pct + "%</span></span>" +
+          "<div class=\"gantt-tracks\">" + cells + "</div></div>";
+      }).join("");
+      gantt.innerHTML = header + rows;
+      $$(".gantt-row", gantt).forEach(function (row) {
+        row.addEventListener("click", function () {
+          openFlowEditor(row.getAttribute("data-est"));
+        });
+      });
+    }
+
+    estimates.forEach(function (est) {
+      var flow = ensureFlowForEstimate(est);
+      var prog = flowProgress(flow);
+      var openIssues = (flow.issues || []).filter(function (i) { return i.status !== "resolved"; }).length;
+      var card = document.createElement("div");
+      card.className = "flow-card";
+      var barSegs = FLOW_STAGES.filter(function (s) { return s.id !== "claim" || flow.claimEnabled; }).map(function (s) {
+        var st = (flow.stages[s.id] && flow.stages[s.id].status) || "pending";
+        return "<div class=\"flow-seg " + st + "\" title=\"" + escapeHtml(s.label) + "\"><span>" + escapeHtml(s.label) + "</span></div>";
+      }).join("");
+      card.innerHTML =
+        "<div class=\"row-between\">" +
+          "<div><strong>" + escapeHtml(est.customerName || "Untitled") + "</strong>" +
+          "<div class=\"meta\">" + escapeHtml(est.estimateNumber || "") + " · " + escapeHtml(est.projectAddress || "") +
+          (est.jobStatus ? " · " + escapeHtml(est.jobStatus) : "") + "</div></div>" +
+          "<div class=\"flow-pct\">" + prog.pct + "%" +
+          (openIssues ? " <span class=\"ins-badge soon\">" + openIssues + " issue(s)</span>" : "") +
+          (flow.claimEnabled ? " <span class=\"ins-badge ok\">Claim</span>" : "") +
+          "</div>" +
+        "</div>" +
+        "<div class=\"flow-bar\">" + barSegs + "</div>" +
+        "<div class=\"meta\">Job days planned: " + (flow.jobDaysPlanned || "—") +
+          " · Actual: " + (flow.jobDaysActual || "—") + "</div>" +
+        "<div class=\"card-actions\">" +
+          "<button type=\"button\" class=\"btn small\" data-act=\"edit\">Edit flow</button>" +
+          "<button type=\"button\" class=\"btn small ghost\" data-act=\"est\">Open estimate</button>" +
+        "</div>";
+      card.querySelector("[data-act=edit]").addEventListener("click", function () { openFlowEditor(est.id); });
+      card.querySelector("[data-act=est]").addEventListener("click", function () { openEditor(est.id); });
+      list.appendChild(card);
+    });
+  }
+
+  function openFlowEditor(estimateId) {
+    var est = (state.estimates || []).find(function (e) { return e.id === estimateId; });
+    if (!est) return;
+    var flow = ensureFlowForEstimate(est);
+    var card = $("#flow-editor-card");
+    var form = $("#flow-form");
+    if (!card || !form) return;
+    card.classList.remove("hidden");
+    $("#flow-editor-title").textContent = "Flow — " + (est.customerName || "Client");
+    form.estimateId.value = est.id;
+    form.jobDaysPlanned.value = flow.jobDaysPlanned || "";
+    form.jobDaysActual.value = flow.jobDaysActual || "";
+    form.claimEnabled.checked = !!flow.claimEnabled;
+    form.claimType.value = flow.claimType || "";
+    var stagesWrap = $("#flow-stages-editor");
+    stagesWrap.innerHTML = FLOW_STAGES.map(function (s) {
+      var st = flow.stages[s.id] || { status: "pending", startDate: "", endDate: "", notes: "" };
+      var disabled = (s.id === "claim" && !flow.claimEnabled) ? " opacity:.45" : "";
+      return "<div class=\"flow-stage-edit" + disabled + "\" data-stage=\"" + s.id + "\">" +
+        "<div class=\"row-between\"><strong>" + escapeHtml(s.label) + "</strong>" +
+        "<span class=\"muted\">" + escapeHtml(s.group) + "</span></div>" +
+        "<div class=\"grid-2\">" +
+          "<label>Status<select data-k=\"status\">" +
+            ["pending", "active", "done", "blocked"].map(function (o) {
+              return "<option value=\"" + o + "\"" + (st.status === o ? " selected" : "") + ">" + o + "</option>";
+            }).join("") +
+          "</select></label>" +
+          "<label>Start<input type=\"date\" data-k=\"startDate\" value=\"" + escapeHtml(st.startDate || "") + "\" /></label>" +
+          "<label>End<input type=\"date\" data-k=\"endDate\" value=\"" + escapeHtml(st.endDate || "") + "\" /></label>" +
+          "<label>Notes<input type=\"text\" data-k=\"notes\" value=\"" + escapeHtml(st.notes || "") + "\" /></label>" +
+        "</div></div>";
+    }).join("");
+    renderFlowIssues(flow);
+    card.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function renderFlowIssues(flow) {
+    var wrap = $("#flow-issues-list");
+    if (!wrap) return;
+    var issues = flow.issues || [];
+    if (!issues.length) {
+      wrap.innerHTML = "<p class=\"muted\">No issues logged.</p>";
+      return;
+    }
+    wrap.innerHTML = issues.slice().reverse().map(function (iss) {
+      return "<div class=\"flow-issue " + escapeHtml(iss.status || "") + "\">" +
+        "<div class=\"row-between\"><strong>" + escapeHtml(iss.title) + "</strong>" +
+        "<span class=\"status-pill\">" + escapeHtml(iss.status) + "</span></div>" +
+        "<div class=\"meta\">" + escapeHtml(iss.date || "") +
+          (iss.stage ? " · " + escapeHtml(iss.stage) : "") + "</div>" +
+        (iss.detail ? "<div class=\"meta\">" + escapeHtml(iss.detail) + "</div>" : "") +
+        "<div class=\"card-actions\">" +
+          (iss.status !== "resolved" ? "<button type=\"button\" class=\"btn small\" data-resolve=\"" + escapeHtml(iss.id) + "\">Resolve</button>" : "") +
+          "<button type=\"button\" class=\"btn small danger\" data-del-issue=\"" + escapeHtml(iss.id) + "\">Delete</button>" +
+        "</div></div>";
+    }).join("");
+    $$("[data-resolve]", wrap).forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-resolve");
+        var iss = flow.issues.find(function (x) { return x.id === id; });
+        if (iss) { iss.status = "resolved"; iss.resolvedAt = new Date().toISOString(); save(); renderFlowIssues(flow); renderFlow(); }
+      });
+    });
+    $$("[data-del-issue]", wrap).forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-del-issue");
+        flow.issues = flow.issues.filter(function (x) { return x.id !== id; });
+        save(); renderFlowIssues(flow); renderFlow();
+      });
+    });
+  }
+
+  function saveFlowForm(e) {
+    e.preventDefault();
+    ensureSettingsShape();
+    var form = e.target;
+    var estId = form.estimateId.value;
+    var est = state.estimates.find(function (x) { return x.id === estId; });
+    if (!est) return;
+    var flow = ensureFlowForEstimate(est);
+    flow.jobDaysPlanned = Number(form.jobDaysPlanned.value) || 0;
+    flow.jobDaysActual = Number(form.jobDaysActual.value) || 0;
+    flow.claimEnabled = !!form.claimEnabled.checked;
+    flow.claimType = form.claimType.value.trim();
+    $$(".flow-stage-edit", $("#flow-stages-editor")).forEach(function (el) {
+      var sid = el.getAttribute("data-stage");
+      if (!flow.stages[sid]) flow.stages[sid] = {};
+      flow.stages[sid].status = el.querySelector("[data-k=status]").value;
+      flow.stages[sid].startDate = el.querySelector("[data-k=startDate]").value;
+      flow.stages[sid].endDate = el.querySelector("[data-k=endDate]").value;
+      flow.stages[sid].notes = el.querySelector("[data-k=notes]").value.trim();
+    });
+    // sync jobStatus lightly from flow
+    if (flow.stages.job.status === "done" || flow.stages.done.status === "done") est.jobStatus = "Done";
+    else if (flow.stages.job.status === "active") est.jobStatus = "In progress";
+    else if (flow.stages.sale.status === "done" && flow.stages.design.status === "active") est.jobStatus = "Scheduled";
+    else if (flow.stages.sale.status === "done") est.jobStatus = "Sold";
+    flow.updatedAt = new Date().toISOString();
+    save();
+    renderFlow();
+    alert("Client flow saved.");
+  }
+
+  function addFlowIssue(e) {
+    e.preventDefault();
+    var form = e.target;
+    var estId = ($("#flow-form") || {}).estimateId && $("#flow-form").estimateId.value;
+    if (!estId) { alert("Open a client flow first."); return; }
+    var est = state.estimates.find(function (x) { return x.id === estId; });
+    if (!est) return;
+    var flow = ensureFlowForEstimate(est);
+    if (!Array.isArray(flow.issues)) flow.issues = [];
+    flow.issues.push({
+      id: uid(),
+      title: form.title.value.trim(),
+      detail: form.detail.value.trim(),
+      stage: form.stage.value,
+      date: form.date.value || todayISO(),
+      status: "open",
+      createdAt: new Date().toISOString()
+    });
+    save();
+    form.reset();
+    form.date.value = todayISO();
+    renderFlowIssues(flow);
+    renderFlow();
+  }
+
+  function bindFlowUI() {
+    if ($("#flow-form")) $("#flow-form").addEventListener("submit", saveFlowForm);
+    if ($("#flow-issue-form")) $("#flow-issue-form").addEventListener("submit", addFlowIssue);
+    if ($("#btn-flow-refresh")) $("#btn-flow-refresh").addEventListener("click", renderFlow);
+    if ($("#btn-cancel-flow-edit")) $("#btn-cancel-flow-edit").addEventListener("click", function () {
+      $("#flow-editor-card").classList.add("hidden");
+    });
+    if ($("#flow-form") && $("#flow-form").claimEnabled) {
+      $("#flow-form").claimEnabled.addEventListener("change", function () {
+        // re-open to refresh claim stage enablement if editing
+        var id = $("#flow-form").estimateId.value;
+        if (id) {
+          var est = state.estimates.find(function (x) { return x.id === id; });
+          if (est) {
+            var flow = ensureFlowForEstimate(est);
+            flow.claimEnabled = !!$("#flow-form").claimEnabled.checked;
+            openFlowEditor(id);
+          }
+        }
+      });
+    }
+  }
+
+
+
+  function wireHubAndAppointments() {
+    if ($("#btn-hub-refresh")) $("#btn-hub-refresh").addEventListener("click", renderHub);
+    if ($("#avail-form")) $("#avail-form").addEventListener("submit", saveAvailForm);
+    if ($("#appt-filter")) $("#appt-filter").addEventListener("change", renderAppointments);
+    if ($("#appt-cal-prev")) $("#appt-cal-prev").addEventListener("click", function () {
+      if (state.apptCalMonth == null) { var n = new Date(); state.apptCalYear = n.getFullYear(); state.apptCalMonth = n.getMonth(); }
+      state.apptCalMonth--;
+      if (state.apptCalMonth < 0) { state.apptCalMonth = 11; state.apptCalYear--; }
+      renderApptAdminCal();
+    });
+    if ($("#appt-cal-next")) $("#appt-cal-next").addEventListener("click", function () {
+      if (state.apptCalMonth == null) { var n = new Date(); state.apptCalYear = n.getFullYear(); state.apptCalMonth = n.getMonth(); }
+      state.apptCalMonth++;
+      if (state.apptCalMonth > 11) { state.apptCalMonth = 0; state.apptCalYear++; }
+      renderApptAdminCal();
+    });
+    if ($("#btn-add-appointment")) $("#btn-add-appointment").addEventListener("click", function () {
+      $("#manual-appt-card").classList.remove("hidden");
+      var f = $("#manual-appt-form");
+      f.reset(); f.id.value = "";
+      f.date.value = todayISO();
+      f.scrollIntoView({ behavior: "smooth" });
+    });
+    if ($("#btn-cancel-manual-appt")) $("#btn-cancel-manual-appt").addEventListener("click", function () {
+      $("#manual-appt-card").classList.add("hidden");
+    });
+    if ($("#manual-appt-form")) $("#manual-appt-form").addEventListener("submit", saveManualAppointment);
+    if ($("#btn-copy-book-url")) $("#btn-copy-book-url").addEventListener("click", function () {
+      var url = location.origin + location.pathname.replace(/index\.html?$/i, "") + "book.html";
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function () { alert("Copied: " + url); });
+      else prompt("Booker URL", url);
+    });
+  }
+
+  function bindAddonUI() {
+    bindAuthUI();
+    if ($("#insurance-form")) $("#insurance-form").addEventListener("submit", saveInsuranceDoc);
+    if ($("#btn-add-insurance")) $("#btn-add-insurance").addEventListener("click", function () { openInsuranceEditor(null); });
+    if ($("#btn-cancel-insurance-edit")) $("#btn-cancel-insurance-edit").addEventListener("click", function () { openInsuranceEditor(null); this.hidden = true; });
+    if ($("#btn-insurance-refresh")) $("#btn-insurance-refresh").addEventListener("click", renderInsurance);
+    if ($("#insurance-file")) $("#insurance-file").addEventListener("change", function (e) {
+      var f = e.target.files && e.target.files[0];
+      if (!f) { pendingInsFile = null; return; }
+      if (f.size > 4.5 * 1024 * 1024) {
+        alert("File too large for localStorage (max ~4.5 MB). Compress or use a smaller PDF/image.");
+        e.target.value = "";
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function () {
+        pendingInsFile = { dataUrl: reader.result, fileName: f.name, mime: f.type || "application/octet-stream" };
+        $("#insurance-file-preview").textContent = "Ready: " + f.name + " (" + Math.round(f.size / 1024) + " KB)";
+      };
+      reader.readAsDataURL(f);
+    });
+
+    if ($("#fleet-form")) $("#fleet-form").addEventListener("submit", saveFleetAsset);
+    if ($("#btn-add-fleet")) $("#btn-add-fleet").addEventListener("click", function () { openFleetEditor(null); });
+    if ($("#btn-cancel-fleet-edit")) $("#btn-cancel-fleet-edit").addEventListener("click", function () { openFleetEditor(null); this.hidden = true; });
+    if ($("#maint-form")) $("#maint-form").addEventListener("submit", saveMaintLog);
+    if ($("#btn-cancel-maint")) $("#btn-cancel-maint").addEventListener("click", function () { $("#maint-form-card").classList.add("hidden"); });
+    if ($("#btn-fleet-refresh")) $("#btn-fleet-refresh").addEventListener("click", renderFleet);
+
+    if ($("#mkt-client-form")) $("#mkt-client-form").addEventListener("submit", saveMarketingClient);
+    if ($("#btn-add-mkt-client")) $("#btn-add-mkt-client").addEventListener("click", function () { openMarketingClient(null); });
+    if ($("#btn-cancel-mkt-client")) $("#btn-cancel-mkt-client").addEventListener("click", function () { openMarketingClient(null); this.hidden = true; });
+    if ($("#btn-mkt-sync")) $("#btn-mkt-sync").addEventListener("click", function () { syncMarketingClientsFromEstimates(); save(); renderMarketing(); alert("Synced clients from estimates."); });
+    if ($("#btn-mkt-select-all")) $("#btn-mkt-select-all").addEventListener("click", function () { $$(".mkt-pick").forEach(function (c) { c.checked = true; }); });
+    if ($("#btn-mkt-select-none")) $("#btn-mkt-select-none").addEventListener("click", function () { $$(".mkt-pick").forEach(function (c) { c.checked = false; }); });
+    if ($("#blast-form")) $("#blast-form").addEventListener("submit", stubSendBlast);
+  }
+
+
   // ========== EXTRA MODULES: jobs, price book, reviews, payments ==========
   var JOB_STATUSES = ["Sold", "Scheduled", "In progress", "Done"];
   var DEFAULT_GOOGLE_REVIEW_URL = "https://search.google.com/local/writereview?placeid=ChIJC1ceBG4y6IkRObpjjofxrpQ";
@@ -556,7 +1595,8 @@
       stripePaymentLinkBase: "",
       stripeMode: "test",
       paymentFeeNote: STRIPE_FEE_NOTE,
-      absorbFees: false
+      absorbFees: false,
+      deskPassword: "jnh2026"
     };
   }
 
@@ -2053,10 +3093,13 @@
     if ($("#stripe-settings-form")) $("#stripe-settings-form").addEventListener("submit", saveStripeSettings);
     if ($("#btn-payments-refresh")) $("#btn-payments-refresh").addEventListener("click", renderPayments);
 
-    if (!state.settings) state.settings = { googleReviewUrl: "https://search.google.com/local/writereview?placeid=ChIJC1ceBG4y6IkRObpjjofxrpQ", stripePublishableKey: "", stripePaymentLinkBase: "", stripeMode: "test", paymentFeeNote: "Card payments typically incur ~2.9% + $0.30 per transaction (Stripe US). Customer or JNH absorbs fees per agreement.", absorbFees: false };
+    if (!state.settings) state.settings = defaultSettings();
+    if (!state.settings.deskPassword) state.settings.deskPassword = "jnh2026";
+    ensureSettingsShape();
     ensurePriceBook();
-
-    showView("estimates");
+    bindAddonUI();
+    applyGateUI();
+    if (isDeskUnlocked()) showView("hub");
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

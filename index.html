@@ -7,29 +7,53 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div id="app">
+  <div id="gate" class="gate" aria-live="polite">
+    <div class="gate-card">
+      <img class="gate-logo" src="jnh-logo-official-cinematic.png" width="1254" height="1254" alt="JNH Masonry Inc." />
+      <h1>JNH Masonry Pro Desk</h1>
+      <p class="muted">Staff only — enter the desk password to continue. Public estimate booking stays open at <a href="book.html">book.html</a>.</p>
+      <form id="gate-form" class="stack" autocomplete="off">
+        <label>Password / PIN
+          <input type="password" id="gate-password" name="password" required autocomplete="current-password" placeholder="Enter password" />
+        </label>
+        <p id="gate-error" class="gate-error hidden" role="alert">Incorrect password. Try again.</p>
+        <button class="btn primary" type="submit">Unlock Pro Desk</button>
+      </form>
+      <p class="muted gate-foot">Simple desk lock — change the password anytime under Settings after unlock.</p>
+    </div>
+  </div>
+
+  <div id="app" class="app-locked" hidden>
     <header class="topbar">
       <div class="brand">
         <img class="brand-logo" src="jnh-logo-official-cinematic.png" width="1254" height="1254" alt="JNH Masonry Inc. official logo" />
         <div class="brand-text">
           <strong>JNH Masonry Pro Desk</strong>
-          <span>Hub · Appointments · Estimates · Jobs · Payroll</span>
+          <span>Hub · Flow · Insurance · Fleet · Marketing</span>
         </div>
       </div>
-      <nav class="tabs" role="tablist">
-        <button class="tab active" data-view="hub" type="button">Hub</button>
-        <button class="tab" data-view="appointments" type="button">Appointments</button>
-        <button class="tab" data-view="estimates" type="button">Estimates</button>
-        <button class="tab" data-view="jobs" type="button">Jobs</button>
-        <button class="tab" data-view="pricebook" type="button">Price Book</button>
-        <button class="tab" data-view="reviews" type="button">Reviews</button>
-        <button class="tab" data-view="payments" type="button">Payments</button>
-        <button class="tab" data-view="employees" type="button">Employees</button>
-        <button class="tab" data-view="timelog" type="button">Time Log</button>
-        <button class="tab" data-view="payroll" type="button">Weekly Payroll</button>
-        <button class="tab" data-view="vendors" type="button">Vendors</button>
-        <button class="tab" data-view="receipts" type="button">Receipts</button>
-      </nav>
+      <div class="topbar-right">
+        <nav class="tabs" role="tablist">
+          <button class="tab active" data-view="hub" type="button">Hub</button>
+          <button class="tab" data-view="appointments" type="button">Appointments</button>
+          <button class="tab" data-view="estimates" type="button">Estimates</button>
+          <button class="tab" data-view="jobs" type="button">Jobs</button>
+          <button class="tab" data-view="pricebook" type="button">Price Book</button>
+          <button class="tab" data-view="insurance" type="button">Insurance</button>
+          <button class="tab" data-view="fleet" type="button">Fleet</button>
+          <button class="tab" data-view="marketing" type="button">Marketing</button>
+          <button class="tab" data-view="flow" type="button">Client Flow</button>
+          <button class="tab" data-view="reviews" type="button">Reviews</button>
+          <button class="tab" data-view="payments" type="button">Payments</button>
+          <button class="tab" data-view="employees" type="button">Employees</button>
+          <button class="tab" data-view="timelog" type="button">Time Log</button>
+          <button class="tab" data-view="payroll" type="button">Weekly Payroll</button>
+          <button class="tab" data-view="vendors" type="button">Vendors</button>
+          <button class="tab" data-view="receipts" type="button">Receipts</button>
+          <button class="tab" data-view="settings" type="button">Settings</button>
+        </nav>
+        <button class="btn ghost small" id="btn-lock-desk" type="button" title="Lock Pro Desk">Lock</button>
+      </div>
     </header>
 
     <main>
@@ -39,7 +63,7 @@
         <div class="panel-head">
           <div>
             <h1>Project Hub</h1>
-            <p class="muted">Live snapshot of estimates, jobs, appointments, payroll, and spend — night &amp; gold command center.</p>
+            <p class="muted">Live snapshot of estimates, jobs, appointments, payroll, and spend — silver &amp; blue command center.</p>
           </div>
           <div class="actions">
             <a class="btn ghost" href="book.html" target="_blank" rel="noopener">Public booker ↗</a>
@@ -364,16 +388,26 @@
           </div>
 
           <div class="card disclosures">
-            <h2>Disclosures</h2>
+            <h2>Disclosures (NYS / Suffolk County–oriented)</h2>
+            <p class="muted disc-legal-note"><strong>Informational only — not legal advice.</strong> These are contractor-style notices for home-improvement estimates in New York / Suffolk County. Confirm license numbers and any required contract language with your counsel or local requirements.</p>
             <ul>
-              <li>JNH Masonry Inc. is <strong>not responsible</strong> for material shipping delays, shortages, or carrier situations outside our control.</li>
-              <li>JNH Masonry Inc. is <strong>not responsible</strong> for manufacturer material performance, color variation, or product defects beyond what is covered by the manufacturer’s warranty.</li>
-              <li>Estimate is valid for 30 days unless otherwise noted. Work begins after signed acceptance and required deposit.</li>
+              <li><strong>License &amp; insurance:</strong> JNH Masonry Inc. represents that it is licensed and insured for home-improvement / masonry work as applicable in New York State and Suffolk County. Ask for current license ID and Certificate of Insurance (COI) before work begins.</li>
+              <li><strong>Payment terms:</strong> Deposit and progress / final payments are as stated in this estimate. Work generally begins after signed acceptance and any required deposit. Card / online payments may incur processing fees as noted.</li>
+              <li><strong>Cancellation rights (if applicable):</strong> Certain New York home-improvement contracts may give the customer a limited right to cancel within a stated period (often three business days) after signing, and/or other statutory notices. If that law applies to your project, the customer’s cancellation rights are in addition to any terms here. This estimate does not waive rights the law requires.</li>
+              <li><strong>Material shipping:</strong> JNH Masonry Inc. is <strong>not responsible</strong> for material shipping delays, shortages, or carrier situations outside our control.</li>
+              <li><strong>Material / manufacturer performance:</strong> JNH Masonry Inc. is <strong>not responsible</strong> for manufacturer material performance, color variation, or product defects beyond what is covered by the manufacturer’s warranty.</li>
+              <li><strong>Validity:</strong> Estimate is valid for 30 days unless otherwise noted.</li>
             </ul>
             <label class="check">
               <input type="checkbox" name="includeDisclosures" checked />
               Include disclosures on printed estimate
             </label>
+          </div>
+
+          <div class="card">
+            <h2>Insurance / COI on this estimate</h2>
+            <p class="muted">Attach uploaded COI or insurance docs (from the Insurance tab) so they travel with this job.</p>
+            <div id="estimate-insurance-attach" class="ins-attach-list"></div>
           </div>
         </form>
       </section>
@@ -576,6 +610,363 @@
             </table>
           </div>
           <p id="payments-empty" class="empty-state hidden">No estimates yet.</p>
+        </div>
+      </section>
+
+      <!-- INSURANCE / COI -->
+      <section id="view-insurance" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Insurance &amp; COI</h1>
+            <p class="muted">Upload Certificates of Insurance and related docs (stored in this browser as base64 — v1). Track expiry and attach to estimates / jobs.</p>
+          </div>
+          <button class="btn primary" id="btn-add-insurance" type="button">+ Add document</button>
+        </div>
+        <div class="card" id="insurance-form-card">
+          <h2 id="insurance-form-title">Add insurance document</h2>
+          <form id="insurance-form" class="stack">
+            <input type="hidden" name="docId" value="" />
+            <div class="grid-2">
+              <label>Label / type
+                <input type="text" name="label" required placeholder="e.g. General Liability COI 2026" />
+              </label>
+              <label>Doc type
+                <select name="docType">
+                  <option value="COI">Certificate of Insurance (COI)</option>
+                  <option value="GL">General Liability</option>
+                  <option value="WC">Workers’ Comp</option>
+                  <option value="Auto">Auto / Commercial Auto</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>Carrier / agency
+                <input type="text" name="carrier" placeholder="Insurer or broker name" />
+              </label>
+              <label>Policy / cert #
+                <input type="text" name="policyNumber" placeholder="Optional" />
+              </label>
+              <label>Effective date
+                <input type="date" name="effectiveDate" />
+              </label>
+              <label>Expiry date
+                <input type="date" name="expiryDate" required />
+              </label>
+            </div>
+            <label>Attach to estimate / job (optional)
+              <select name="estimateId" id="insurance-estimate-select">
+                <option value="">— None / company-wide —</option>
+              </select>
+            </label>
+            <label>File (PDF or image)
+              <input type="file" name="file" id="insurance-file" accept="application/pdf,image/*,.pdf" />
+            </label>
+            <div id="insurance-file-preview" class="ins-file-preview muted"></div>
+            <label>Notes
+              <textarea name="notes" rows="2" placeholder="Additional insured, job-specific requirements…"></textarea>
+            </label>
+            <div class="actions">
+              <button class="btn primary" type="submit">Save document</button>
+              <button class="btn ghost" type="button" id="btn-cancel-insurance-edit" hidden>Cancel edit</button>
+            </div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="row-between">
+            <h2>Stored documents</h2>
+            <button class="btn ghost" id="btn-insurance-refresh" type="button">Refresh</button>
+          </div>
+          <div id="insurance-list" class="ins-list"></div>
+          <p id="insurance-empty" class="empty-state hidden">No insurance docs yet. Upload a COI to track expiry and attach to jobs.</p>
+        </div>
+      </section>
+
+      <!-- FLEET / EQUIPMENT -->
+      <section id="view-fleet" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Fleet &amp; Equipment</h1>
+            <p class="muted">Vehicles and equipment purchased (cost &amp; date) plus maintenance and repair logs.</p>
+          </div>
+          <button class="btn primary" id="btn-add-fleet" type="button">+ Add asset</button>
+        </div>
+        <div class="card">
+          <h2 id="fleet-form-title">Add vehicle / equipment</h2>
+          <form id="fleet-form" class="stack">
+            <input type="hidden" name="assetId" value="" />
+            <div class="grid-2">
+              <label>Kind
+                <select name="kind">
+                  <option value="Vehicle">Vehicle</option>
+                  <option value="Trailer">Trailer</option>
+                  <option value="Equipment">Equipment</option>
+                  <option value="Tool">Tool</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>Name / nickname
+                <input type="text" name="name" required placeholder="e.g. F-250 work truck" />
+              </label>
+              <label>Year
+                <input type="text" name="year" placeholder="2022" />
+              </label>
+              <label>Make
+                <input type="text" name="make" placeholder="Ford" />
+              </label>
+              <label>Model
+                <input type="text" name="model" placeholder="F-250" />
+              </label>
+              <label>Plate / serial #
+                <input type="text" name="plateOrSerial" placeholder="Plate or serial" />
+              </label>
+              <label>Purchase date
+                <input type="date" name="purchaseDate" />
+              </label>
+              <label>Purchase cost ($)
+                <input type="number" name="purchaseCost" min="0" step="0.01" placeholder="0.00" />
+              </label>
+            </div>
+            <label>Notes
+              <textarea name="notes" rows="2" placeholder="VIN, hours, financing…"></textarea>
+            </label>
+            <div class="actions">
+              <button class="btn primary" type="submit">Save asset</button>
+              <button class="btn ghost" type="button" id="btn-cancel-fleet-edit" hidden>Cancel edit</button>
+            </div>
+          </form>
+        </div>
+        <div class="card hidden" id="maint-form-card">
+          <h2>Log maintenance / repair</h2>
+          <form id="maint-form" class="stack">
+            <label>Asset
+              <select name="assetId" id="maint-asset-select" required></select>
+            </label>
+            <div class="grid-2">
+              <label>Date
+                <input type="date" name="date" required />
+              </label>
+              <label>Type
+                <select name="kind">
+                  <option>Maintenance</option>
+                  <option>Repair</option>
+                  <option>Inspection</option>
+                  <option>Oil change</option>
+                  <option>Tires</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label>Cost ($)
+                <input type="number" name="cost" min="0" step="0.01" placeholder="0.00" />
+              </label>
+              <label>Vendor / shop
+                <input type="text" name="vendor" placeholder="Shop name" />
+              </label>
+              <label>Odometer / hours
+                <input type="text" name="odometer" placeholder="Optional" />
+              </label>
+            </div>
+            <label>Notes
+              <textarea name="notes" rows="2" placeholder="What was done…"></textarea>
+            </label>
+            <div class="actions">
+              <button class="btn primary" type="submit">Save log</button>
+              <button class="btn ghost" type="button" id="btn-cancel-maint">Cancel</button>
+            </div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="row-between">
+            <h2>Assets</h2>
+            <button class="btn ghost" id="btn-fleet-refresh" type="button">Refresh</button>
+          </div>
+          <div id="fleet-list" class="fleet-list"></div>
+          <p id="fleet-empty" class="empty-state hidden">No vehicles or equipment yet.</p>
+        </div>
+      </section>
+
+      <!-- MASS MARKETING -->
+      <section id="view-marketing" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Mass Marketing</h1>
+            <p class="muted">Client list + email / SMS blast composer. <strong>Send is stubbed</strong> until Twilio / email API is wired — blasts are saved locally only.</p>
+          </div>
+          <div class="actions">
+            <button class="btn ghost" id="btn-mkt-sync" type="button">Sync from estimates</button>
+            <button class="btn primary" id="btn-add-mkt-client" type="button">+ Add client</button>
+          </div>
+        </div>
+        <div class="hub-grid">
+          <div class="card">
+            <h2>Client / contact</h2>
+            <form id="mkt-client-form" class="stack">
+              <input type="hidden" name="clientId" value="" />
+              <label>Name
+                <input type="text" name="name" required placeholder="Customer name" />
+              </label>
+              <label>Email
+                <input type="email" name="email" placeholder="name@email.com" />
+              </label>
+              <label>Phone (SMS)
+                <input type="tel" name="phone" placeholder="631-555-0100" />
+              </label>
+              <label class="check"><input type="checkbox" name="optInEmail" checked /> Opt-in email</label>
+              <label class="check"><input type="checkbox" name="optInSms" checked /> Opt-in SMS</label>
+              <label>Notes
+                <textarea name="notes" rows="2"></textarea>
+              </label>
+              <div class="actions">
+                <button class="btn primary" type="submit">Save client</button>
+                <button class="btn ghost" type="button" id="btn-cancel-mkt-client" hidden>Cancel</button>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <h2>Blast composer (stub send)</h2>
+            <form id="blast-form" class="stack">
+              <label>Channel
+                <select name="channel">
+                  <option value="email">Email</option>
+                  <option value="sms">SMS</option>
+                  <option value="both">Both (email + SMS where opted-in)</option>
+                </select>
+              </label>
+              <label>Subject (email)
+                <input type="text" name="subject" placeholder="Spring masonry special from JNH" />
+              </label>
+              <label>Message
+                <textarea name="body" rows="6" required placeholder="Hi {{name}}, …"></textarea>
+              </label>
+              <p class="muted">Uses checked clients below (or all opted-in if none checked). Does <strong>not</strong> send yet — creates a local stub log.</p>
+              <div class="actions">
+                <button class="btn primary" type="submit">Stub send blast</button>
+              </div>
+            </form>
+            <h3 style="margin-top:1.25rem">Blast history</h3>
+            <div id="blast-history"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row-between">
+            <h2>Clients</h2>
+            <div class="actions">
+              <button class="btn small ghost" type="button" id="btn-mkt-select-all">Select all</button>
+              <button class="btn small ghost" type="button" id="btn-mkt-select-none">Select none</button>
+            </div>
+          </div>
+          <div id="marketing-clients" class="mkt-list"></div>
+          <p id="marketing-clients-empty" class="empty-state hidden">No marketing clients yet. Sync from estimates or add manually.</p>
+        </div>
+      </section>
+
+            <!-- CLIENT FLOW / PIPELINE / GANTT -->
+      <section id="view-flow" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Client Flow</h1>
+            <p class="muted">Per-client pipeline: <strong>Lead → Estimate → Sale → Design → Materials → Delivery → Job → Complete</strong>, optional <strong>Claim</strong> (insurance / warranty), issues log, and overview bar / Gantt.</p>
+          </div>
+          <button class="btn ghost" id="btn-flow-refresh" type="button">Refresh</button>
+        </div>
+
+        <div class="card">
+          <h2>Overview Gantt</h2>
+          <p class="muted">Click a row to edit that client’s flow. Colors: pending · active · done · blocked.</p>
+          <div id="flow-gantt" class="gantt"></div>
+        </div>
+
+        <div class="card hidden" id="flow-editor-card">
+          <div class="row-between">
+            <h2 id="flow-editor-title">Edit flow</h2>
+            <button class="btn ghost" type="button" id="btn-cancel-flow-edit">Close</button>
+          </div>
+          <form id="flow-form" class="stack">
+            <input type="hidden" name="estimateId" value="" />
+            <div class="grid-2">
+              <label>Job days planned
+                <input type="number" name="jobDaysPlanned" min="0" step="1" placeholder="e.g. 5" />
+              </label>
+              <label>Job days actual
+                <input type="number" name="jobDaysActual" min="0" step="1" placeholder="e.g. 7" />
+              </label>
+              <label class="check" style="align-self:end">
+                <input type="checkbox" name="claimEnabled" />
+                Enable claim stage (insurance / warranty)
+              </label>
+              <label>Claim type
+                <input type="text" name="claimType" placeholder="Insurance / warranty / other" />
+              </label>
+            </div>
+            <h3>Stages</h3>
+            <div id="flow-stages-editor" class="flow-stages-editor"></div>
+            <div class="actions">
+              <button class="btn primary" type="submit">Save flow</button>
+            </div>
+          </form>
+          <h3>Issues log</h3>
+          <form id="flow-issue-form" class="stack">
+            <div class="grid-2">
+              <label>Title
+                <input type="text" name="title" required placeholder="e.g. Material backorder" />
+              </label>
+              <label>Date
+                <input type="date" name="date" />
+              </label>
+              <label>Related stage
+                <select name="stage">
+                  <option value="lead">Lead</option>
+                  <option value="estimate">Estimate</option>
+                  <option value="sale">Sale</option>
+                  <option value="design">Design</option>
+                  <option value="materials">Material purchase</option>
+                  <option value="delivery">Delivery arrival</option>
+                  <option value="job">Job / install</option>
+                  <option value="done">Complete</option>
+                  <option value="claim">Claim</option>
+                </select>
+              </label>
+            </div>
+            <label>Detail
+              <textarea name="detail" rows="2" placeholder="What happened / next step…"></textarea>
+            </label>
+            <button class="btn ghost" type="submit">Add issue</button>
+          </form>
+          <div id="flow-issues-list" class="flow-issues-list"></div>
+        </div>
+
+        <div class="card">
+          <h2>Clients</h2>
+          <div id="flow-clients" class="flow-clients"></div>
+          <p id="flow-empty" class="empty-state hidden">No estimates yet — create an estimate to start a client flow (lead → estimate → …).</p>
+        </div>
+      </section>
+
+      <!-- SETTINGS / DESK LOCK -->
+      <section id="view-settings" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Settings</h1>
+            <p class="muted">Desk password / PIN (gates this admin app only — <code>book.html</code> stays public).</p>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Change desk password</h2>
+          <form id="password-settings-form" class="stack" autocomplete="off">
+            <label>Current password
+              <input type="password" name="currentPassword" id="settings-current-password" required autocomplete="current-password" />
+            </label>
+            <label>New password / PIN
+              <input type="password" name="newPassword" id="settings-new-password" required minlength="4" autocomplete="new-password" placeholder="At least 4 characters" />
+            </label>
+            <label>Confirm new password
+              <input type="password" name="confirmPassword" id="settings-confirm-password" required minlength="4" autocomplete="new-password" />
+            </label>
+            <p class="muted">Stored only in this browser’s localStorage with the rest of Pro Desk data. Clearing site data resets to the default password.</p>
+            <div class="actions">
+              <button class="btn primary" type="submit">Update password</button>
+              <button class="btn ghost" type="button" id="btn-lock-from-settings">Lock desk now</button>
+            </div>
+            <p id="password-settings-msg" class="muted" role="status"></p>
+          </form>
         </div>
       </section>
 

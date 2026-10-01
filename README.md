@@ -2,7 +2,7 @@
 
 Local ops tool for Jose (JNH Masonry Inc.) — professional estimates, crew time tracking, weekly payroll, vendors, and receipt capture (OCR hook stubbed).
 
-**Night + gold UI.** Static HTML/CSS/JS — no build step, easy to host and later link from the Carrd Pro Desk footer.
+**Silver + blue UI.** Static HTML/CSS/JS — no build step, easy to host and later link from the Carrd Pro Desk footer.
 
 ## Open locally
 
@@ -35,6 +35,11 @@ Path: `/workspace/jnh-masonry/pro-desk/index.html`
 | **Jobs** | Kanban: Sold → Scheduled → In progress → Done; linked to estimates & time hours |
 | **Price Book** | Cambridge / stone catalog with last cost; add lines to estimates fast |
 | **Reviews** | Google review URL + QR (printed on estimates); editable Place ID link |
+| **Insurance** | COI / insurance docs (base64), expiry tracking, attach to estimates |
+| **Fleet** | Vehicles & equipment (purchase cost/date) + maintenance/repair logs |
+| **Client Flow** | Lead→Estimate→Sale→Design→Materials→Delivery→Job→Complete + optional Claim; issues log; Gantt overview |
+| **Marketing** | Client list + email/SMS blast composer (send stubbed until Twilio/email API) |
+| **Settings** | Change desk password / lock |
 | **Payments** | Stripe-ready: publishable key, Payment Link stubs, deposit/invoice, mark paid, refund stub, fee note |
 
 ## Estimate print header
@@ -45,7 +50,7 @@ Every printed estimate includes:
 - 631-965-1754 · jnhmasonry@gmail.com · jnhmas.com
 - Licensed & Insured
 
-### Disclosures (on every estimate when checked)
+### Disclosures (on every estimate when checked — NYS / Suffolk–oriented, not legal advice)
 
 - JNH not responsible for material shipping situations
 - JNH not responsible for material / manufacturer performance
@@ -86,18 +91,18 @@ Modeled after `jose-estimate-sample.docx` — numbered scope sections, customer 
 ## Stack
 
 - `index.html` — shell + views
-- `styles.css` — dark night + gold theme
+- `styles.css` — silver + blue theme
 - `app.js` — all logic (no framework)
 
 ## Public estimate booker
 
-- **`book.html`** — customer-facing night+gold scheduler (date → time → name/phone/address).
+- **`book.html`** — customer-facing silver+blue scheduler (date → time → name/phone/address).
 - Live: https://miltonchoto-boop.github.io/jnh-pro-desk/book.html
 - Embed: add `?embed=1` for a tighter layout; Carrd can link “Book Estimate” here.
 - Stores appointments in the same `jnh_pro_desk_v1` localStorage (same browser/origin as Pro Desk). Confirmation also offers **mailto** to Jose so bookings aren’t lost across devices (v1).
 
 ## Later
 
-- Optional PIN gate
+- PIN / password gate on `index.html` (default in Settings; `book.html` stays public)
 - Live: https://miltonchoto-boop.github.io/jnh-pro-desk/ — linked from Carrd Pro Desk footer
 - Wire OCR API into `runOcrStub`
