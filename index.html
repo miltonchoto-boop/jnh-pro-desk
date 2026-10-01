@@ -112,7 +112,7 @@
                 <input type="number" name="amountPaid" min="0" step="0.01" placeholder="0.00" />
               </label>
             </div>
-            <label>Stripe / payment link (optional)
+            <label>Stripe Payment Link (optional)
               <input type="url" name="paymentLink" placeholder="https://buy.stripe.com/… or Payment Link URL" />
             </label>
             <label>Estimate # (optional)
@@ -327,8 +327,8 @@
       <section id="view-payments" class="view">
         <div class="panel-head">
           <div>
-            <h1>Payments</h1>
-            <p class="muted">Stripe-ready deposit &amp; invoice links. Store your publishable key; mark estimates paid. Live charges need a backend — v1 generates Payment Link stubs and tracks status.</p>
+            <h1>Stripe Payments</h1>
+            <p class="muted"><strong>Stripe</strong> is the credit processor for JNH. Save your publishable key and Payment Links for deposits &amp; invoices; mark estimates paid here. Live Checkout/PaymentIntents/Refunds need the API server (Dockerfile) — v1 uses Stripe Payment Links + local status tracking.</p>
           </div>
         </div>
         <div class="card">

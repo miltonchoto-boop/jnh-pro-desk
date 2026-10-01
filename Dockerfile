@@ -1,8 +1,7 @@
 # JNH Masonry Pro Desk — static nginx (v1)
-# Later: add OCR API sidecar or multi-stage Node/Python service on /api/ocr
+# Later: Node/Python sidecar for Stripe Checkout Sessions, webhooks, Refunds API
+# Never expose Stripe secret keys in the static frontend
 FROM nginx:alpine
-COPY index.html app.js styles.css /usr/share/nginx/html/
-# Optional: uncomment when adding API reverse-proxy
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY index.html app.js styles.css jnh-logo-official-cinematic.png /usr/share/nginx/html/
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

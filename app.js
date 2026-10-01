@@ -733,7 +733,7 @@
     alert("Review link saved. Printed estimates will use this QR/link.");
   }
 
-  // ----- Payments (Stripe-ready) -----
+  // ----- Payments (Stripe — locked processor) -----
   function renderPayments() {
     if (!state.settings) state.settings = defaultSettings();
     var pk = $("#stripe-pk");
@@ -900,7 +900,7 @@
     }
     save();
     renderPayments();
-    alert("Stripe settings saved (publishable key + link base only).");
+    alert("Stripe settings saved. Processor: Stripe only. Publishable key + Payment Link base stored locally (never paste sk_ secret keys).");
   }
 
 
