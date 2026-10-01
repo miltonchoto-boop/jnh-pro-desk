@@ -35,6 +35,8 @@
       <div class="topbar-right">
         <nav class="tabs" role="tablist">
           <button class="tab active" data-view="hub" type="button">Hub</button>
+          <button class="tab" data-view="weather" type="button">Weather</button>
+          <button class="tab" data-view="rolodex" type="button">Rolodex</button>
           <button class="tab" data-view="appointments" type="button">Appointments</button>
           <button class="tab" data-view="estimates" type="button">Estimates</button>
           <button class="tab" data-view="jobs" type="button">Jobs</button>
@@ -105,6 +107,137 @@
             <div class="row-between"><h2>Vendors &amp; receipts</h2><button class="btn small ghost" type="button" data-goto="receipts">Receipts →</button></div>
             <div id="hub-spend" class="hub-list"></div>
           </div>
+        </div>
+      </section>
+
+      <!-- WEATHER PLANNING -->
+      <section id="view-weather" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Weather Planning</h1>
+            <p class="muted">NOAA / NWS field-window planning for masonry work — precipitation and humidity first, with temperature and wind context.</p>
+          </div>
+          <button class="btn primary" id="btn-weather-refresh" type="button">Refresh NOAA data</button>
+        </div>
+
+        <div class="card weather-location-card">
+          <div class="row-between">
+            <h2>Job-site location</h2>
+            <span class="weather-source">Data: NWS forecast · NOAA CPC outlook</span>
+          </div>
+          <form id="weather-settings-form" class="grid-2">
+            <label>Location label
+              <input type="text" name="locationName" placeholder="Suffolk County, NY" />
+            </label>
+            <label>Latitude
+              <input type="number" name="latitude" min="-90" max="90" step="0.0001" required />
+            </label>
+            <label>Longitude
+              <input type="number" name="longitude" min="-180" max="180" step="0.0001" required />
+            </label>
+            <div class="weather-location-help">
+              <span class="muted">Use the actual job address coordinates when a site is outside the default area.</span>
+              <button class="btn small" type="submit">Save location &amp; refresh</button>
+            </div>
+          </form>
+          <p id="weather-status" class="muted weather-status" role="status">Ready to load NOAA data.</p>
+        </div>
+
+        <div class="card hidden" id="weather-alerts-card">
+          <div class="row-between"><h2>Active NWS alerts</h2><span class="muted">Check before dispatch</span></div>
+          <div id="weather-alerts" class="weather-alerts"></div>
+        </div>
+
+        <div class="weather-grid">
+          <div class="card">
+            <div class="row-between">
+              <div><h2>5-day field window</h2><p class="muted">Daily roll-up from NWS hourly forecast. Rain chance and humidity are emphasized for mortar, concrete, joint sand, and sealers.</p></div>
+              <span class="badge">NWS</span>
+            </div>
+            <div id="weather-5day" class="weather-forecast"></div>
+          </div>
+          <div class="card">
+            <div class="row-between">
+              <div><h2>Month outlook</h2><p class="muted">NOAA Climate Prediction Center outlook for the next calendar month at this location.</p></div>
+              <span class="badge">CPC</span>
+            </div>
+            <div id="weather-month" class="weather-month"></div>
+            <p class="muted weather-footnote">Outlook categories are probabilities, not a day-by-day forecast. Use the 5-day NWS window for dispatch decisions.</p>
+            <div class="actions weather-links">
+              <a class="btn ghost small" href="https://www.cpc.ncep.noaa.gov/products/predictions/long_range/fxus07.html" target="_blank" rel="noopener">CPC monthly discussion ↗</a>
+              <a class="btn ghost small" href="https://www.weather.gov/" target="_blank" rel="noopener">weather.gov ↗</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-between"><h2>Masonry planning readout</h2><span class="muted">Operational aid — confirm product/manufacturer requirements</span></div>
+          <div id="weather-guidance" class="weather-guidance"></div>
+        </div>
+      </section>
+
+      <!-- ROLODEX / CAPABILITY DIRECTORY -->
+      <section id="view-rolodex" class="view">
+        <div class="panel-head">
+          <div>
+            <h1>Rolodex</h1>
+            <p class="muted">Find the right person by capability first — supplier, excavator, electrician, plumber, landscaper, inspector, and more.</p>
+          </div>
+          <button class="btn primary" id="btn-add-rolodex" type="button">+ Add contact</button>
+        </div>
+
+        <div class="hub-grid">
+          <div class="card">
+            <h2>Contact / capability</h2>
+            <form id="rolodex-form" class="stack">
+              <input type="hidden" name="contactId" value="" />
+              <label>Name
+                <input type="text" name="name" required placeholder="Person or company" />
+              </label>
+              <label>What can they do? <span class="muted">Separate capabilities with commas</span>
+                <input type="text" name="capabilities" required list="rolodex-capabilities" placeholder="supplier, excavator, electrician" />
+              </label>
+              <datalist id="rolodex-capabilities">
+                <option value="supplier"></option><option value="excavator"></option><option value="electrician"></option><option value="plumber"></option><option value="landscaper"></option><option value="concrete"></option><option value="dumpster / disposal"></option><option value="equipment rental"></option><option value="inspector"></option>
+              </datalist>
+              <div class="grid-2">
+                <label>Company / shop
+                  <input type="text" name="company" placeholder="Business name" />
+                </label>
+                <label>Service area
+                  <input type="text" name="area" placeholder="Suffolk · Nassau · Queens" />
+                </label>
+                <label>Phone
+                  <input type="tel" name="phone" placeholder="(631) 555-0100" />
+                </label>
+                <label>Email / contact
+                  <input type="text" name="email" placeholder="name@example.com" />
+                </label>
+              </div>
+              <label>Notes
+                <textarea name="notes" rows="3" placeholder="Rates, availability, account #, specialties, who referred them…"></textarea>
+              </label>
+              <div class="actions">
+                <button class="btn primary" type="submit">Save contact</button>
+                <button class="btn ghost" type="button" id="btn-cancel-rolodex-edit" hidden>Cancel edit</button>
+              </div>
+            </form>
+          </div>
+          <div class="card rolodex-help">
+            <h2>Use it by capability</h2>
+            <p class="muted">Add each capability a contact can cover. The directory creates a group for every capability, so a company can appear in multiple useful places without duplicating the contact.</p>
+            <div class="capability-examples"><span>Supplier</span><span>Excavator</span><span>Electrician</span><span>Plumber</span><span>Concrete</span><span>Equipment rental</span></div>
+            <p class="muted">Keep vendor purchasing records in <strong>Vendors</strong>; use Rolodex for the broader network of people and trades.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-between">
+            <div><h2>Directory by capability</h2><p class="muted">Search by name, company, capability, area, or notes.</p></div>
+            <label class="inline">Search <input id="rolodex-search" type="search" placeholder="e.g. excavator" /></label>
+          </div>
+          <div id="rolodex-groups" class="rolodex-groups"></div>
+          <p id="rolodex-empty" class="empty-state hidden">No Rolodex contacts yet. Add the people JNH can call for the next job.</p>
         </div>
       </section>
 

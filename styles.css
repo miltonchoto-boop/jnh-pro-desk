@@ -588,3 +588,72 @@ input:focus, select:focus, textarea:focus {
 }
 .flow-issue.resolved { opacity: .65; }
 
+
+
+/* Weather planning */
+.weather-source { color: var(--text-muted); font-size: .78rem; }
+.weather-status { margin: .8rem 0 0; min-height: 1.2em; }
+.weather-location-help { display: flex; align-items: flex-end; justify-content: space-between; gap: .75rem; }
+.weather-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); gap: 1rem; }
+.weather-forecast { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: .6rem; overflow-x: auto; }
+.weather-day { min-width: 150px; padding: .75rem; border: 1px solid var(--border); border-top: 3px solid var(--border-gold); border-radius: 10px; background: var(--bg-elev); }
+.weather-day.good { border-top-color: var(--ok); }
+.weather-day.caution { border-top-color: var(--gold); }
+.weather-day.hold { border-top-color: var(--danger); }
+.weather-day-head { display: flex; flex-direction: column; gap: .4rem; }
+.weather-day-head strong { color: var(--gold-soft); }
+.weather-window { width: fit-content; border-radius: 999px; padding: .15rem .4rem; font-size: .65rem; font-weight: 700; }
+.weather-window.good { color: var(--ok); border: 1px solid #2f6b45; }
+.weather-window.caution { color: var(--gold); border: 1px solid var(--border-gold); }
+.weather-window.hold { color: var(--danger); border: 1px solid #6a3030; }
+.weather-primary { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; margin: .75rem 0; }
+.weather-primary > div { display: flex; flex-direction: column; gap: .15rem; padding: .5rem; border-radius: 8px; background: rgba(93,156,240,.08); }
+.weather-primary span, .weather-detail { color: var(--text-muted); font-size: .7rem; }
+.weather-primary strong { color: var(--text); font-size: 1.45rem; }
+.weather-detail { display: flex; justify-content: space-between; gap: .35rem; }
+.weather-day p { font-size: .78rem; color: var(--text-muted); line-height: 1.35; margin: .6rem 0 0; }
+.weather-month { min-height: 188px; }
+.month-location { display: flex; flex-direction: column; gap: .2rem; margin-bottom: .8rem; }
+.month-outlook-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.month-outlook { display: flex; flex-direction: column; gap: .25rem; padding: .8rem; border: 1px solid var(--border-gold); border-radius: 10px; background: linear-gradient(145deg, rgba(93,156,240,.1), transparent); }
+.month-outlook strong { color: var(--gold); font-size: 1.05rem; }
+.month-outlook span:last-child { color: var(--text-muted); font-size: .78rem; }
+.weather-footnote { font-size: .78rem; line-height: 1.35; }
+.weather-links { margin-top: .6rem; }
+.weather-alerts { display: grid; gap: .6rem; }
+.weather-alert { padding: .65rem .8rem; border: 1px solid #6a3030; border-left: 4px solid var(--danger); border-radius: 8px; background: rgba(232,93,93,.08); }
+.weather-alert strong { color: var(--danger); }
+.weather-alert-severity { color: var(--text-muted); font-size: .75rem; margin-left: .45rem; }
+.weather-alert p { margin: .3rem 0 0; color: var(--text-muted); font-size: .82rem; }
+.weather-recommendation { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; padding: 1rem; border: 1px solid var(--border); border-left: 5px solid var(--border-gold); border-radius: 10px; background: var(--bg-elev); }
+.weather-recommendation.good { border-left-color: var(--ok); }
+.weather-recommendation.caution { border-left-color: var(--gold); }
+.weather-recommendation.hold { border-left-color: var(--danger); }
+.weather-recommendation > div:first-child { display: flex; flex-direction: column; gap: .2rem; min-width: 190px; }
+.weather-recommendation strong { color: var(--gold); font-size: 1.15rem; }
+.weather-rec-metrics { display: flex; gap: .5rem; flex-wrap: wrap; }
+.weather-rec-metrics span { padding: .4rem .6rem; border-radius: 999px; background: rgba(93,156,240,.1); color: var(--text); font-weight: 700; font-size: .82rem; }
+.weather-recommendation p { flex: 1; min-width: 240px; margin: 0; color: var(--text-muted); font-size: .88rem; line-height: 1.4; }
+.weather-rules { display: flex; flex-wrap: wrap; gap: .7rem 1rem; margin-top: .75rem; color: var(--text-muted); font-size: .8rem; }
+@media (max-width: 900px) { .weather-grid { grid-template-columns: 1fr; } .weather-forecast { grid-template-columns: repeat(5, minmax(165px, 1fr)); } }
+@media (max-width: 560px) { .weather-location-help { align-items: stretch; flex-direction: column; } .month-outlook-grid { grid-template-columns: 1fr; } .weather-forecast { grid-template-columns: repeat(5, minmax(150px, 1fr)); } }
+
+
+/* Rolodex */
+.rolodex-help { align-self: start; }
+.capability-examples { display: flex; flex-wrap: wrap; gap: .45rem; margin: 1rem 0; }
+.capability-examples span { padding: .35rem .55rem; border: 1px solid var(--border-gold); border-radius: 999px; color: var(--gold-soft); background: rgba(93,156,240,.08); font-size: .8rem; }
+.rolodex-groups { display: grid; gap: 1rem; }
+.rolodex-group { border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elev); padding: .8rem; }
+.rolodex-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: .7rem; margin-bottom: .6rem; border-bottom: 1px solid var(--border); padding-bottom: .45rem; }
+.rolodex-group-head h3 { margin: 0; color: var(--gold); text-transform: capitalize; }
+.rolodex-group-head span { color: var(--text-muted); font-size: .78rem; }
+.rolodex-contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .6rem; }
+.rolodex-contact { display: flex; justify-content: space-between; gap: .7rem; padding: .7rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); }
+.rolodex-contact-main { min-width: 0; flex: 1; }
+.rolodex-contact h4 { margin: 0 0 .2rem; color: var(--text); }
+.rolodex-contact .meta { color: var(--text-muted); font-size: .78rem; }
+.rolodex-contact p { margin: .45rem 0; color: var(--text-muted); font-size: .8rem; white-space: pre-wrap; }
+.rolodex-contact-links { display: flex; flex-wrap: wrap; gap: .4rem .7rem; font-size: .8rem; margin-top: .45rem; }
+.rolodex-contact .actions { align-items: flex-start; }
+@media (max-width: 600px) { .rolodex-contact { flex-direction: column; } .rolodex-contact .actions { align-items: flex-end; } }

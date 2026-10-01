@@ -15,6 +15,7 @@
     employees: [],
     timeEntries: [],
     vendors: [],
+    rolodexContacts: [],
     receipts: [],
     priceBook: [],
     settings: null,
@@ -35,7 +36,8 @@
     editingVendorId: null,
     editingReceiptId: null,
     apptCalYear: null,
-    apptCalMonth: null
+    apptCalMonth: null,
+    weatherData: null
   };
 
   function $(sel, el) { return (el || document).querySelector(sel); }
@@ -99,6 +101,10 @@
       });
       state.timeEntries = data.timeEntries || [];
       state.vendors = data.vendors || [];
+      state.rolodexContacts = (data.rolodexContacts || []).map(function (c) {
+        c.capabilities = Array.isArray(c.capabilities) ? c.capabilities : String(c.capabilities || "").split(",").map(function (x) { return x.trim(); }).filter(Boolean);
+        return c;
+      });
       state.receipts = data.receipts || [];
       state.priceBook = data.priceBook || [];
       state.settings = data.settings || null;
@@ -133,6 +139,7 @@
       employees: state.employees,
       timeEntries: state.timeEntries,
       vendors: state.vendors,
+      rolodexContacts: state.rolodexContacts || [],
       receipts: state.receipts,
       priceBook: state.priceBook,
       settings: state.settings,
@@ -173,6 +180,7 @@
     });
     var map = {
       hub: "view-hub",
+      weather: "view-weather",
       appointments: "view-appointments",
       estimates: "view-estimates",
       editor: "view-editor",
@@ -188,6 +196,7 @@
       timelog: "view-timelog",
       payroll: "view-payroll",
       vendors: "view-vendors",
+      rolodex: "view-rolodex",
       receipts: "view-receipts",
       settings: "view-settings"
     };
@@ -195,6 +204,7 @@
     var el = document.getElementById(id);
     if (el) el.classList.add("active");
     if (name === "hub") renderHub();
+    if (name === "weather") { renderWeather(); if (!state.weatherData) loadWeatherPlan(); }
     if (name === "appointments") renderAppointments();
     if (name === "estimates") renderEstimatesList();
     if (name === "jobs") renderJobs();
@@ -205,6 +215,7 @@
     if (name === "timelog") { fillTimeFormSelects(); renderTimeLog(); }
     if (name === "payroll") renderPayroll();
     if (name === "vendors") renderVendors();
+    if (name === "rolodex") renderRolodex();
     if (name === "receipts") { fillReceiptSelects(); renderReceipts(); }
     if (name === "insurance") renderInsurance();
     if (name === "fleet") renderFleet();
@@ -1596,7 +1607,10 @@
       stripeMode: "test",
       paymentFeeNote: STRIPE_FEE_NOTE,
       absorbFees: false,
-      deskPassword: "jnh2026"
+      deskPassword: "jnh2026",
+      weatherLocationName: "Suffolk County, NY",
+      weatherLatitude: 40.7891,
+      weatherLongitude: -73.1350
     };
   }
 
@@ -2244,6 +2258,287 @@
     var root = $("#print-root");
     root.innerHTML = html;
     window.print();
+  }
+
+  // ---------- Rolodex: capability-first contacts ----------
+  function normalizedCapabilities(value) {
+    var list = Array.isArray(value) ? value : String(value || "").split(",");
+    return list.map(function (x) { return String(x).trim().replace(/\s+/g, " "); }).filter(Boolean).filter(function (x, i, a) {
+      return a.map(function (v) { return v.toLowerCase(); }).indexOf(x.toLowerCase()) === i;
+    });
+  }
+
+  function renderRolodex() {
+    var root = $("#rolodex-groups");
+    var empty = $("#rolodex-empty");
+    if (!root || !empty) return;
+    var q = String(( $("#rolodex-search") || {} ).value || "").trim().toLowerCase();
+    var groups = {};
+    (state.rolodexContacts || []).forEach(function (contact) {
+      var caps = normalizedCapabilities(contact.capabilities);
+      var haystack = [contact.name, contact.company, contact.area, contact.phone, contact.email, contact.notes].concat(caps).join(" ").toLowerCase();
+      if (q && haystack.indexOf(q) < 0) return;
+      if (!caps.length) caps = ["Uncategorized"];
+      caps.forEach(function (cap) {
+        var key = cap.toLowerCase();
+        if (!groups[key]) groups[key] = { label: cap, contacts: [] };
+        groups[key].contacts.push(contact);
+      });
+    });
+    var keys = Object.keys(groups).sort(function (a, b) { return groups[a].label.localeCompare(groups[b].label); });
+    if (!keys.length) {
+      root.innerHTML = "";
+      empty.classList.remove("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
+    root.innerHTML = keys.map(function (key) {
+      var group = groups[key];
+      group.contacts.sort(function (a, b) { return String(a.name || "").localeCompare(String(b.name || "")); });
+      return '<section class="rolodex-group"><div class="rolodex-group-head"><h3>' + escapeHtml(group.label) + '</h3><span>' + group.contacts.length + ' contact' + (group.contacts.length === 1 ? '' : 's') + '</span></div><div class="rolodex-contact-grid">' +
+        group.contacts.map(function (c) {
+          var phoneHref = String(c.phone || "").replace(/[^+\d]/g, "");
+          var email = String(c.email || "");
+          return '<article class="rolodex-contact"><div class="rolodex-contact-main"><h4>' + escapeHtml(c.name || "Unnamed") + '</h4>' +
+            (c.company ? '<div class="meta">' + escapeHtml(c.company) + '</div>' : '') +
+            (c.area ? '<div class="meta">Area: ' + escapeHtml(c.area) + '</div>' : '') +
+            (c.notes ? '<p>' + escapeHtml(c.notes) + '</p>' : '') +
+            '<div class="rolodex-contact-links">' + (c.phone ? '<a href="tel:' + escapeHtml(phoneHref) + '">' + escapeHtml(c.phone) + '</a>' : '') + (email ? '<a href="mailto:' + escapeHtml(email) + '">' + escapeHtml(email) + '</a>' : '') + '</div></div>' +
+            '<div class="actions"><button type="button" class="btn small" data-rolodex-act="edit" data-id="' + escapeHtml(c.id) + '">Edit</button><button type="button" class="btn small danger" data-rolodex-act="del" data-id="' + escapeHtml(c.id) + '">×</button></div></article>';
+        }).join("") + '</div></section>';
+    }).join("");
+    $$("[data-rolodex-act=edit]").forEach(function (button) { button.addEventListener("click", function () { editRolodexContact(button.getAttribute("data-id")); }); });
+    $$("[data-rolodex-act=del]").forEach(function (button) { button.addEventListener("click", function () { deleteRolodexContact(button.getAttribute("data-id")); }); });
+  }
+
+  function saveRolodexContact(ev) {
+    ev.preventDefault();
+    var form = $("#rolodex-form");
+    var caps = normalizedCapabilities(form.capabilities.value);
+    if (!form.name.value.trim() || !caps.length) { alert("Name and at least one capability are required."); return; }
+    var id = form.contactId.value || uid();
+    var contact = { id: id, name: form.name.value.trim(), capabilities: caps, company: form.company.value.trim(), area: form.area.value.trim(), phone: form.phone.value.trim(), email: form.email.value.trim(), notes: form.notes.value.trim() };
+    var idx = (state.rolodexContacts || []).findIndex(function (x) { return x.id === id; });
+    if (idx >= 0) state.rolodexContacts[idx] = contact; else state.rolodexContacts.push(contact);
+    save();
+    form.reset(); form.contactId.value = "";
+    $("#btn-cancel-rolodex-edit").hidden = true;
+    renderRolodex();
+  }
+
+  function editRolodexContact(id) {
+    var c = (state.rolodexContacts || []).find(function (x) { return x.id === id; });
+    if (!c) return;
+    var f = $("#rolodex-form");
+    f.contactId.value = c.id; f.name.value = c.name || ""; f.capabilities.value = normalizedCapabilities(c.capabilities).join(", "); f.company.value = c.company || ""; f.area.value = c.area || ""; f.phone.value = c.phone || ""; f.email.value = c.email || ""; f.notes.value = c.notes || "";
+    $("#btn-cancel-rolodex-edit").hidden = false;
+    f.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function deleteRolodexContact(id) {
+    var c = (state.rolodexContacts || []).find(function (x) { return x.id === id; });
+    if (!c || !confirm("Delete " + (c.name || "this contact") + " from the Rolodex?")) return;
+    state.rolodexContacts = state.rolodexContacts.filter(function (x) { return x.id !== id; });
+    save(); renderRolodex();
+  }
+
+  // ---------- weather planning (NOAA / NWS + CPC) ----------
+  var DEFAULT_WEATHER_LOCATION = { name: "Suffolk County, NY", lat: 40.7891, lon: -73.1350 };
+  var NWS_API = "https://api.weather.gov";
+  var CPC_API = "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/";
+
+  function weatherLocation() {
+    ensureSettingsShape();
+    var lat = Number(state.settings.weatherLatitude);
+    var lon = Number(state.settings.weatherLongitude);
+    return {
+      name: String(state.settings.weatherLocationName || DEFAULT_WEATHER_LOCATION.name),
+      lat: isFinite(lat) && lat >= -90 && lat <= 90 ? lat : DEFAULT_WEATHER_LOCATION.lat,
+      lon: isFinite(lon) && lon >= -180 && lon <= 180 ? lon : DEFAULT_WEATHER_LOCATION.lon
+    };
+  }
+
+  function weatherJson(url) {
+    return fetch(url, { headers: { "Accept": "application/geo+json, application/json" } }).then(function (res) {
+      if (!res.ok) throw new Error("NOAA request failed (" + res.status + ")");
+      return res.json();
+    });
+  }
+
+  function weatherDateLabel(date) {
+    return new Date(date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  }
+
+  function weatherNumber(value, fallback) {
+    return value == null || !isFinite(Number(value)) ? fallback : Number(value);
+  }
+
+  function weatherCategory(code) {
+    return code === "A" ? "Above normal" : code === "B" ? "Below normal" : code === "EC" ? "Equal chances" : (code || "Unavailable");
+  }
+
+  function weatherPlanningClass(precip, humidity) {
+    if (precip >= 60 || humidity >= 85) return "hold";
+    if (precip >= 35 || humidity >= 75) return "caution";
+    return "good";
+  }
+
+  function weatherPlanningText(precip, humidity) {
+    if (precip >= 60 || humidity >= 85) return "Hold / protect: wet conditions are likely or humidity is high. Confirm cure, cover, drainage, and manufacturer limits before starting.";
+    if (precip >= 35 || humidity >= 75) return "Caution: keep a rain plan and verify substrate/product requirements. Prioritize protected prep or flexible tasks.";
+    return "Better field window: precipitation and humidity are comparatively favorable, but monitor the hourly forecast and actual site conditions.";
+  }
+
+  function renderWeather() {
+    var loc = weatherLocation();
+    var form = $("#weather-settings-form");
+    if (form) {
+      if (document.activeElement !== form.locationName) form.locationName.value = loc.name;
+      if (document.activeElement !== form.latitude) form.latitude.value = loc.lat;
+      if (document.activeElement !== form.longitude) form.longitude.value = loc.lon;
+    }
+    var status = $("#weather-status");
+    if (status && !state.weatherData) status.textContent = "Ready to load NOAA data for " + loc.name + ".";
+    if (!state.weatherData) {
+      $("#weather-5day").innerHTML = '<p class="empty-state">Click <strong>Refresh NOAA data</strong> to load the five-day field window.</p>';
+      $("#weather-month").innerHTML = '<p class="empty-state">The CPC monthly outlook will appear here after refresh.</p>';
+      $("#weather-guidance").innerHTML = '<p class="muted">No forecast loaded yet. Set the job-site location, then refresh.</p>';
+      return;
+    }
+    var data = state.weatherData;
+    var days = data.days || [];
+    $("#weather-5day").innerHTML = days.length ? days.map(function (d) {
+      var p = Math.round(weatherNumber(d.precip, 0));
+      var h = Math.round(weatherNumber(d.humidity, 0));
+      var cls = weatherPlanningClass(p, h);
+      return '<article class="weather-day ' + cls + '">' +
+        '<div class="weather-day-head"><strong>' + escapeHtml(weatherDateLabel(d.date)) + '</strong><span class="weather-window ' + cls + '">' + (cls === "good" ? "Better window" : cls === "caution" ? "Caution" : "Protect / hold") + '</span></div>' +
+        '<div class="weather-primary"><div><span>Rain chance</span><strong>' + p + '%</strong></div><div><span>Humidity</span><strong>' + h + '%</strong></div></div>' +
+        '<div class="weather-detail"><span>' + escapeHtml(d.low == null ? "—" : Math.round(d.low) + "°" ) + ' low / ' + escapeHtml(d.high == null ? "—" : Math.round(d.high) + "°" ) + ' high</span><span>' + escapeHtml(d.wind || "Wind —") + '</span></div>' +
+        '<p>' + escapeHtml(d.forecast || "Forecast unavailable") + '</p>' +
+      '</article>';
+    }).join("") : '<p class="empty-state">NWS did not return a five-day forecast.</p>';
+
+    var monthly = data.monthly || {};
+    var temp = monthly.temp;
+    var precip = monthly.precip;
+    $("#weather-month").innerHTML =
+      '<div class="month-location"><strong>' + escapeHtml(data.locationName || loc.name) + '</strong><span class="muted">Next calendar month · CPC point lookup</span></div>' +
+      '<div class="month-outlook-grid">' +
+        '<div class="month-outlook"><span class="muted">Temperature</span><strong>' + escapeHtml(temp ? weatherCategory(temp.cat) : "Unavailable") + '</strong><span>' + (temp ? escapeHtml(Math.round(weatherNumber(temp.prob, 0)) + "% probability") : "Try refresh") + '</span></div>' +
+        '<div class="month-outlook"><span class="muted">Precipitation</span><strong>' + escapeHtml(precip ? weatherCategory(precip.cat) : "Unavailable") + '</strong><span>' + (precip ? escapeHtml(Math.round(weatherNumber(precip.prob, 0)) + "% probability") : "Try refresh") + '</span></div>' +
+      '</div>' +
+      '<p class="muted">' + escapeHtml((temp && temp.season) || (precip && precip.season) || "CPC outlook") + '. Equal chances means no dominant category; it does not mean no rain.</p>';
+
+    var alerts = data.alerts || [];
+    var alertsCard = $("#weather-alerts-card");
+    if (alerts.length) {
+      alertsCard.classList.remove("hidden");
+      $("#weather-alerts").innerHTML = alerts.map(function (a) {
+        return '<div class="weather-alert"><strong>' + escapeHtml(a.event || "NWS alert") + '</strong><span class="weather-alert-severity">' + escapeHtml(a.severity || "") + '</span><p>' + escapeHtml(a.headline || a.description || "Check weather.gov for details.") + '</p></div>';
+      }).join("");
+    } else {
+      alertsCard.classList.add("hidden");
+      $("#weather-alerts").innerHTML = "";
+    }
+
+    var best = days.slice().sort(function (a, b) {
+      return (weatherNumber(a.precip, 100) + weatherNumber(a.humidity, 100)) - (weatherNumber(b.precip, 100) + weatherNumber(b.humidity, 100));
+    })[0];
+    var guidance = $("#weather-guidance");
+    if (!best) {
+      guidance.innerHTML = '<p class="muted">No planning guidance available yet.</p>';
+    } else {
+      var bp = Math.round(weatherNumber(best.precip, 0));
+      var bh = Math.round(weatherNumber(best.humidity, 0));
+      var bc = weatherPlanningClass(bp, bh);
+      guidance.innerHTML = '<div class="weather-recommendation ' + bc + '"><div><span class="muted">Best relative window in the next five days</span><strong>' + escapeHtml(weatherDateLabel(best.date)) + '</strong></div><div class="weather-rec-metrics"><span>Rain ' + bp + '%</span><span>Humidity ' + bh + '%</span></div><p>' + escapeHtml(weatherPlanningText(bp, bh)) + '</p></div>' +
+        '<div class="weather-rules"><span><strong>Better:</strong> under 35% rain and under 75% humidity</span><span><strong>Caution:</strong> 35–59% rain or 75–84% humidity</span><span><strong>Protect / hold:</strong> 60%+ rain or 85%+ humidity</span></div>';
+    }
+  }
+
+  function saveWeatherSettings(ev) {
+    ev.preventDefault();
+    var form = $("#weather-settings-form");
+    var lat = Number(form.latitude.value), lon = Number(form.longitude.value);
+    if (!isFinite(lat) || lat < -90 || lat > 90 || !isFinite(lon) || lon < -180 || lon > 180) {
+      alert("Enter a valid latitude and longitude."); return;
+    }
+    state.settings.weatherLocationName = form.locationName.value.trim() || DEFAULT_WEATHER_LOCATION.name;
+    state.settings.weatherLatitude = lat;
+    state.settings.weatherLongitude = lon;
+    state.weatherData = null;
+    save();
+    renderWeather();
+    loadWeatherPlan();
+  }
+
+  function cpcPointUrl(service, lat, lon) {
+    var query = "f=json&geometry=" + encodeURIComponent(lon + "," + lat) +
+      "&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects" +
+      "&outFields=fcst_date,valid_seas,prob,cat&returnGeometry=false&orderByFields=fcst_date%20DESC";
+    return CPC_API + service + "/MapServer/0/query?" + query;
+  }
+
+  function loadCpcPoint(service, lat, lon) {
+    return weatherJson(cpcPointUrl(service, lat, lon)).then(function (json) {
+      var feature = json && json.features && json.features[0];
+      if (!feature) return null;
+      var a = feature.attributes || {};
+      return { season: a.valid_seas || "Next month", prob: a.prob, cat: a.cat };
+    }).catch(function () { return null; });
+  }
+
+  function loadWeatherPlan() {
+    var loc = weatherLocation();
+    var status = $("#weather-status");
+    if (status) status.textContent = "Loading NOAA / NWS data for " + loc.name + "…";
+    var pointUrl = NWS_API + "/points/" + loc.lat.toFixed(4) + "," + loc.lon.toFixed(4);
+    weatherJson(pointUrl).then(function (point) {
+      var props = point.properties || {};
+      return Promise.all([
+        weatherJson(props.forecastHourly),
+        props.forecast ? weatherJson(props.forecast) : Promise.resolve({ properties: { periods: [] } }),
+        weatherJson(NWS_API + "/alerts/active?point=" + loc.lat.toFixed(4) + "," + loc.lon.toFixed(4)).catch(function () { return { features: [] }; }),
+        loadCpcPoint("cpc_mthly_temp_outlk", loc.lat, loc.lon),
+        loadCpcPoint("cpc_mthly_precip_outlk", loc.lat, loc.lon)
+      ]);
+    }).then(function (results) {
+      var hourly = results[0] && results[0].properties && results[0].properties.periods || [];
+      var daily = {};
+      hourly.forEach(function (period) {
+        var date = String(period.startTime || "").slice(0, 10);
+        if (!date) return;
+        if (!daily[date]) daily[date] = { date: date, temps: [], precip: [], humidity: [], winds: [], forecasts: [] };
+        var d = daily[date];
+        if (period.temperature != null) d.temps.push(Number(period.temperature));
+        if (period.probabilityOfPrecipitation && period.probabilityOfPrecipitation.value != null) d.precip.push(Number(period.probabilityOfPrecipitation.value));
+        if (period.relativeHumidity && period.relativeHumidity.value != null) d.humidity.push(Number(period.relativeHumidity.value));
+        if (period.windSpeed) d.winds.push(period.windSpeed);
+        if (period.shortForecast) d.forecasts.push(period.shortForecast);
+      });
+      var days = Object.keys(daily).sort().slice(0, 5).map(function (date) {
+        var d = daily[date];
+        var tally = {};
+        d.forecasts.forEach(function (f) { tally[f] = (tally[f] || 0) + 1; });
+        var common = d.forecasts.sort(function (a, b) { return (tally[b] || 0) - (tally[a] || 0); })[0] || "";
+        return { date: date, low: d.temps.length ? Math.min.apply(null, d.temps) : null, high: d.temps.length ? Math.max.apply(null, d.temps) : null,
+          precip: d.precip.length ? Math.max.apply(null, d.precip) : 0, humidity: d.humidity.length ? Math.round(d.humidity.reduce(function (a, b) { return a + b; }, 0) / d.humidity.length) : null,
+          wind: d.winds[0] || "", forecast: common };
+      });
+      var alertFeatures = results[2] && results[2].features || [];
+      state.weatherData = {
+        locationName: loc.name, days: days,
+        alerts: alertFeatures.slice(0, 6).map(function (f) { return f.properties || {}; }),
+        monthly: { temp: results[3], precip: results[4] },
+        fetchedAt: new Date().toISOString()
+      };
+      renderWeather();
+      if (status) status.textContent = "Updated " + new Date().toLocaleString() + " · NOAA/NWS source";
+    }).catch(function (err) {
+      if (status) status.textContent = "Could not load NOAA data: " + (err && err.message ? err.message : "network error") + ". Check the location and try again.";
+      if (!state.weatherData) renderWeather();
+    });
   }
 
   // ---------- vendors ----------
@@ -3043,6 +3338,14 @@
     $("#timelog-week").value = startOfWeek(todayISO());
     $("#payroll-week").addEventListener("change", renderPayroll);
     $("#btn-print-payroll").addEventListener("click", printPayroll);
+
+    if ($("#rolodex-form")) $("#rolodex-form").addEventListener("submit", saveRolodexContact);
+    if ($("#rolodex-search")) $("#rolodex-search").addEventListener("input", renderRolodex);
+    if ($("#btn-add-rolodex")) $("#btn-add-rolodex").addEventListener("click", function () { var f = $("#rolodex-form"); f.reset(); f.contactId.value = ""; $("#btn-cancel-rolodex-edit").hidden = true; f.scrollIntoView({ behavior: "smooth" }); f.name.focus(); });
+    if ($("#btn-cancel-rolodex-edit")) $("#btn-cancel-rolodex-edit").addEventListener("click", function () { var f = $("#rolodex-form"); f.reset(); f.contactId.value = ""; this.hidden = true; });
+
+    if ($("#weather-settings-form")) $("#weather-settings-form").addEventListener("submit", saveWeatherSettings);
+    if ($("#btn-weather-refresh")) $("#btn-weather-refresh").addEventListener("click", loadWeatherPlan);
 
     $("#vendor-form").addEventListener("submit", saveVendor);
     $("#btn-add-vendor").addEventListener("click", function () {

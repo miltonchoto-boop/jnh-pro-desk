@@ -31,6 +31,7 @@ Path: `/workspace/jnh-masonry/pro-desk/index.html`
 | **Time Log** | Hours per worker / job / day; entries retain the rate used when logged |
 | **Weekly Payroll** | Sun–Sat summary split into On books vs Cash totals, with hours and amount owed per person |
 | **Vendors** | Supplier list (category, phone, notes) |
+| **Rolodex** | Capability-first directory — supplier, excavator, electrician, plumber, landscaper, and any custom capability |
 | **Receipts** | Upload or camera snapshot; attach to vendor + job; **OCR stub** fills fields for manual confirm |
 | **Jobs** | Kanban: Sold → Scheduled → In progress → Done; linked to estimates & time hours |
 | **Price Book** | Cambridge / stone catalog with last cost; add lines to estimates fast |
@@ -39,6 +40,7 @@ Path: `/workspace/jnh-masonry/pro-desk/index.html`
 | **Fleet** | Vehicles & equipment (purchase cost/date) + maintenance/repair logs |
 | **Client Flow** | Lead→Estimate→Sale→Design→Materials→Delivery→Job→Complete + optional Claim; issues log; Gantt overview |
 | **Marketing** | Client list + email/SMS blast composer (send stubbed until Twilio/email API) |
+| **Weather** | NOAA/NWS 5-day field window with precipitation + humidity emphasis, active alerts, and NOAA CPC next-month temperature/precipitation outlook |
 | **Settings** | Change desk password / lock |
 | **Payments** | Stripe-ready: publishable key, Payment Link stubs, deposit/invoice, mark paid, refund stub, fee note |
 
@@ -58,7 +60,7 @@ Every printed estimate includes:
 
 ## Data storage
 
-All data is stored in the browser **localStorage** key `jnh_pro_desk_v1` (estimates, employees including pay type, time entries, vendors, receipts including image data URLs).
+All data is stored in the browser **localStorage** key `jnh_pro_desk_v1` (estimates, employees including pay type, time entries, vendors, capability-first Rolodex contacts, weather location, receipts including image data URLs).
 
 - Use **Export JSON** on an estimate, or import a full backup JSON from the Estimates tab.
 - Clearing site data / using another browser loses local data — export backups for important jobs.
