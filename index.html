@@ -58,6 +58,8 @@
       </div>
     </header>
 
+    <button type="button" id="btn-back-pro-desk" class="btn-back-pro-desk" hidden aria-label="Back to Pro Desk">← Back to Pro Desk</button>
+
     <main>
 
       <!-- PROJECT MANAGEMENT HUB -->
@@ -185,7 +187,18 @@
             <h1>Rolodex</h1>
             <p class="muted">Find the right person by capability first — supplier, excavator, electrician, plumber, landscaper, inspector, and more.</p>
           </div>
-          <button class="btn primary" id="btn-add-rolodex" type="button">+ Add contact</button>
+          <div class="actions">
+            <button class="btn ghost" id="btn-rolodex-pull" type="button" title="Import from Gmail Contacts">Pull from Gmail</button>
+            <button class="btn ghost" id="btn-rolodex-push" type="button" title="Push Rolodex to Gmail Contacts">Push to Gmail</button>
+            <button class="btn ghost" id="btn-rolodex-sync" type="button" title="Two-way sync">Sync both ways</button>
+            <button class="btn primary" id="btn-add-rolodex" type="button">+ Add contact</button>
+          </div>
+        </div>
+        <p class="muted" id="rolodex-sync-status" style="margin:.35rem 0 1rem">Gmail Contacts sync uses the same Worker OAuth as Calendar (jnhmasonry@gmail.com). Configure booking-config.js + ADMIN_TOKEN first.</p>
+        <div class="card hidden" id="rolodex-admin-token-card" style="margin-bottom:1rem">
+          <label>Admin token (for Contacts sync)
+            <input type="password" id="rolodex-admin-token" placeholder="ADMIN_TOKEN" autocomplete="off" />
+          </label>
         </div>
 
         <div class="hub-grid">
@@ -248,10 +261,11 @@
         <div class="panel-head">
           <div>
             <h1>Appointments</h1>
-            <p class="muted">Availability for the public estimate booker + booked on-site appointments.</p>
+            <p class="muted">Availability for the public estimate booker + appointments. Public requests stay <strong>pending</strong> until you Confirm (syncs Google Calendar when API is live).</p>
           </div>
           <div class="actions">
             <a class="btn ghost" id="btn-copy-booker" href="book.html" target="_blank" rel="noopener">Open public booker</a>
+            <a class="btn ghost" href="confirm.html" target="_blank" rel="noopener">Mobile confirm</a>
             <button class="btn primary" id="btn-add-appointment" type="button">+ Manual booking</button>
           </div>
         </div>
@@ -333,6 +347,7 @@
               <select id="appt-filter">
                 <option value="upcoming">Upcoming</option>
                 <option value="all">All</option>
+                <option value="pending">Pending</option>
                 <option value="booked">Booked</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="done">Done</option>

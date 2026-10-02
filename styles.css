@@ -483,6 +483,7 @@ input:focus, select:focus, textarea:focus {
   background: var(--bg-input); color: var(--text-muted);
 }
 .status-pill.booked { border-color: var(--border-gold); color: var(--gold); }
+.status-pill.pending { border-color: #b8860b; color: #e6c35c; background: rgba(184,134,11,.12); }
 .status-pill.confirmed { border-color: #2f6b45; color: var(--ok); }
 .status-pill.done { border-color: #3a5a8a; color: #8eb6f0; }
 .status-pill.cancelled, .status-pill.no-show { border-color: #6a3030; color: var(--danger); }
@@ -709,3 +710,59 @@ input:focus, select:focus, textarea:focus {
   line-height: 1.2;
 }
 .hub-pipe-note { margin: .65rem 0 0; font-size: .8rem; }
+
+/* Estimates fullscreen workspace */
+body.estimates-fullscreen .topbar {
+  display: none !important;
+}
+body.estimates-fullscreen #app {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0.75rem 1rem 2.5rem;
+  min-height: 100vh;
+}
+body.estimates-fullscreen main {
+  min-height: calc(100vh - 1.5rem);
+}
+body.estimates-fullscreen #view-estimates.active,
+body.estimates-fullscreen #view-editor.active {
+  min-height: calc(100vh - 2rem);
+}
+.btn-back-pro-desk {
+  position: fixed;
+  top: 0.65rem;
+  right: 0.85rem;
+  z-index: 40;
+  border: 1px solid var(--border-gold);
+  background: linear-gradient(180deg, #1e2a3c, #151d2a);
+  color: var(--gold-soft);
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+  display: none;
+}
+body.estimates-fullscreen .btn-back-pro-desk {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.btn-back-pro-desk:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: linear-gradient(180deg, #243448, #1a2434);
+}
+@media (max-width: 720px) {
+  .btn-back-pro-desk {
+    top: 0.45rem;
+    right: 0.5rem;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.8rem;
+  }
+  body.estimates-fullscreen #app {
+    padding: 2.75rem 0.75rem 2rem; /* room for fixed Back button */
+  }
+}

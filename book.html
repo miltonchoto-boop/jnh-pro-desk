@@ -63,8 +63,9 @@
   <div class="book-shell" id="book-root">
     <header class="book-hero">
       <img src="jnh-logo-official-cinematic.png" width="1254" height="1254" alt="JNH Masonry Inc." />
-      <h1>Book Estimate Appointment</h1>
+      <h1>Request Estimate Appointment</h1>
       <p>Free on-site estimate · Licensed &amp; Insured · Bay Shore &amp; Suffolk County</p>
+      <p class="muted" style="margin:.55rem 0 0;font-size:.9rem"><strong style="color:var(--gold)">Request appointment — Jose will confirm</strong> before it’s locked on the calendar.</p>
       <div class="book-steps" id="book-steps">
         <span data-step="1" class="on">1 · Date</span>
         <span data-step="2">2 · Time</span>
@@ -83,7 +84,7 @@
           </div>
         </div>
         <div class="cal-grid" id="cal-grid"></div>
-        <p class="muted" id="date-hint" style="margin-top:.85rem">Open days follow Jose’s availability (Mon–Fri by default). Times are Eastern.</p>
+        <p class="muted" id="date-hint" style="margin-top:.85rem">Only free slots are shown (busy / blocked times stay hidden). Times are Eastern. Submitting sends a <strong>request</strong> — Jose confirms before it’s final.</p>
       </div>
 
       <div id="step-time" class="hidden">
@@ -117,16 +118,16 @@
             <input type="text" name="notes" placeholder="Gate code, best contact time, project type…" />
           </label>
           <div class="actions">
-            <button class="btn primary" type="submit">Confirm appointment</button>
+            <button class="btn primary" type="submit">Request appointment</button>
           </div>
         </form>
       </div>
 
       <div id="step-done" class="hidden">
         <div class="book-success">
-          <h2>You’re booked</h2>
+          <h2>Request received</h2>
           <p id="done-summary" class="muted"></p>
-          <p style="margin:1rem 0 .5rem">Jose will confirm by phone. Need to change something?</p>
+          <p style="margin:1rem 0 .5rem"><strong style="color:var(--gold)">Pending</strong> — Jose will confirm this appointment (usually same day). Need to change something?</p>
           <div class="actions" style="justify-content:center">
             <a class="btn primary" href="tel:+16319651754">Call (631) 965-1754</a>
             <a class="btn ghost" id="done-email" href="#">Email details to Jose</a>
@@ -140,11 +141,13 @@
       <a href="https://jnhmas.com">jnhmas.com</a> ·
       <a href="tel:+16319651754">(631) 965-1754</a> ·
       <a href="mailto:jnhmasonry@gmail.com">jnhmasonry@gmail.com</a><br />
-      <span class="muted">v1 stores your booking in this browser for Pro Desk. Email Jose a copy so he always gets it.</span>
+      <span class="muted">Requests stay <strong>pending</strong> until Jose confirms. Email a copy so he always gets it. Google Calendar sync activates after OAuth setup.</span>
     </p>
   </div>
 
+  <script src="booking-config.js"></script>
   <script src="booking-store.js"></script>
+  <script src="booking-api.js"></script>
   <script>
   (function () {
     "use strict";
@@ -175,10 +178,47 @@
       return new Date(viewYear, viewMonth, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
     }
 
-    function renderCal() {
+    var apiSlots = null; // { "YYYY-MM-DD": ["09:00", ...] } when API mode
+    var apiReady = false;
+
+    function bookableFromLocal() {
       var avail = B.getAvailability();
       var bookable = {};
       B.bookableDates(avail).forEach(function (d) { bookable[d] = true; });
+      return bookable;
+    }
+
+    function bookableFromApi() {
+      var bookable = {};
+      if (!apiSlots) return bookable;
+      Object.keys(apiSlots).forEach(function (d) {
+        if (apiSlots[d] && apiSlots[d].length) bookable[d] = true;
+      });
+      return bookable;
+    }
+
+    async function refreshApiSlots() {
+      if (!window.JNHBookingAPI || !window.JNHBookingAPI.apiEnabled()) {
+        apiReady = false; apiSlots = null; return;
+      }
+      try {
+        var lead = (B.getAvailability().leadDays != null) ? B.getAvailability().leadDays : 1;
+        var horizon = B.getAvailability().horizonDays || 45;
+        var from = B.addDaysISO(B.todayISO(), lead);
+        var to = B.addDaysISO(from, horizon);
+        var data = await window.JNHBookingAPI.fetchSlots(from, to);
+        apiSlots = (data && data.slots) || {};
+        apiReady = true;
+        var hint = $("#date-hint");
+        if (hint) hint.innerHTML = "Live free slots from Jose’s Google Calendar (busy times hidden). Times are Eastern. Submitting sends a <strong>request</strong> — Jose confirms before it’s final.";
+      } catch (err) {
+        apiReady = false; apiSlots = null;
+        console.warn("Booking API slots unavailable, using local fallback", err);
+      }
+    }
+
+    function renderCal() {
+      var bookable = (apiReady && apiSlots) ? bookableFromApi() : bookableFromLocal();
       $("#cal-label").textContent = monthLabel();
       var grid = $("#cal-grid");
       grid.innerHTML = "";
@@ -225,7 +265,7 @@
       setStep(2);
       var d = new Date(selectedDate + "T12:00:00");
       $("#time-date-label").textContent = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-      var slots = B.openSlotsForDate(selectedDate);
+      var slots = (apiReady && apiSlots && apiSlots[selectedDate]) ? apiSlots[selectedDate].slice() : B.openSlotsForDate(selectedDate);
       var grid = $("#slot-grid");
       grid.innerHTML = "";
       $("#slots-empty").classList.toggle("hidden", slots.length > 0);
@@ -264,10 +304,36 @@
     $("#back-date").addEventListener("click", function () { setStep(1); renderCal(); });
     $("#back-time").addEventListener("click", openTimeStep);
 
-    $("#book-form").addEventListener("submit", function (e) {
+    function showDone(ap) {
+      lastAp = ap;
+      setStep(4);
+      var d = new Date(ap.date + "T12:00:00");
+      $("#done-summary").innerHTML =
+        "<strong style=\"color:var(--gold)\">" + escapeHtml(ap.name) + "</strong><br>" +
+        d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) +
+        " at " + B.formatTimeLabel(ap.time) + "<br>" +
+        escapeHtml(ap.address) + "<br>" + escapeHtml(ap.phone) +
+        "<br><span class=\"status-pill pending\">pending confirmation</span>";
+      var body = [
+        "PENDING estimate appointment request (Pro Desk booker)",
+        "",
+        "Name: " + ap.name,
+        "Phone: " + ap.phone,
+        "Address: " + ap.address,
+        "When: " + ap.date + " " + ap.time + " ET",
+        "Notes: " + (ap.notes || "(none)"),
+        "Status: pending — please confirm in Pro Desk or confirm.html",
+        "Id: " + ap.id
+      ].join("\n");
+      $("#done-email").href = "mailto:jnhmasonry@gmail.com?subject=" +
+        encodeURIComponent("PENDING estimate request · " + ap.date + " " + ap.time) +
+        "&body=" + encodeURIComponent(body);
+    }
+
+    $("#book-form").addEventListener("submit", async function (e) {
       e.preventDefault();
       var fd = new FormData(e.target);
-      var res = B.bookAppointment({
+      var payload = {
         name: fd.get("name"),
         phone: fd.get("phone"),
         address: fd.get("address"),
@@ -275,29 +341,26 @@
         date: selectedDate,
         time: selectedTime,
         source: location.search.indexOf("embed=1") >= 0 ? "embed" : "public"
-      });
+      };
+      try {
+        if (window.JNHBookingAPI && window.JNHBookingAPI.apiEnabled()) {
+          var apiRes = await window.JNHBookingAPI.requestBooking(payload);
+          if (!apiRes || !apiRes.ok) { alert((apiRes && apiRes.error) || "Booking failed"); return; }
+          // Mirror locally so Pro Desk on same browser sees it
+          var list = B.getAppointments();
+          list.push(apiRes.appointment);
+          B.saveAppointments(list);
+          showDone(apiRes.appointment);
+          await refreshApiSlots();
+          return;
+        }
+      } catch (err) {
+        alert(String(err.message || err));
+        return;
+      }
+      var res = B.bookAppointment(payload);
       if (!res.ok) { alert(res.error); return; }
-      lastAp = res.appointment;
-      setStep(4);
-      var d = new Date(lastAp.date + "T12:00:00");
-      $("#done-summary").innerHTML =
-        "<strong style=\"color:var(--gold)\">" + escapeHtml(lastAp.name) + "</strong><br>" +
-        d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) +
-        " at " + B.formatTimeLabel(lastAp.time) + "<br>" +
-        escapeHtml(lastAp.address) + "<br>" + escapeHtml(lastAp.phone);
-      var body = [
-        "New estimate appointment (jnhmas.com booker)",
-        "",
-        "Name: " + lastAp.name,
-        "Phone: " + lastAp.phone,
-        "Address: " + lastAp.address,
-        "When: " + lastAp.date + " " + lastAp.time + " ET",
-        "Notes: " + (lastAp.notes || "(none)"),
-        "Id: " + lastAp.id
-      ].join("\n");
-      $("#done-email").href = "mailto:jnhmasonry@gmail.com?subject=" +
-        encodeURIComponent("Estimate appointment · " + lastAp.date + " " + lastAp.time) +
-        "&body=" + encodeURIComponent(body);
+      showDone(res.appointment);
     });
 
     $("#book-another").addEventListener("click", function () {
@@ -312,7 +375,7 @@
     }
 
     setStep(1);
-    renderCal();
+    refreshApiSlots().then(function () { renderCal(); });
   })();
   </script>
 </body>

@@ -26,7 +26,7 @@ Path: `/workspace/jnh-masonry/pro-desk/index.html`
 |-----|----------------|
 | **Hub** | Visual project command center — KPIs, jobs kanban, 14-day timeline (appointments + scheduled jobs), payroll & spend snapshot |
 | **Appointments** | Admin availability (days/hours/slots) + booked estimate appointments list; drives public booker |
-| **Estimates** | Customer fields, multi-section Scope of Work, labor+material line items with auto totals, disclosures, payment terms placeholders, print/PDF-ready HTML, JSON save/export/import |
+| **Estimates** | Full-viewport workspace (hides topbar; **Back to Pro Desk** returns to Hub). Customer fields, multi-section Scope of Work, labor+material line items with auto totals, disclosures, payment terms placeholders, print/PDF-ready HTML, JSON save/export/import |
 | **Employees** | Crew roster with hourly pay rates and pay type: On books (NY payroll) or Cash |
 | **Time Log** | Hours per worker / job / day; entries retain the rate used when logged |
 | **Weekly Payroll** | Sun–Sat summary split into On books vs Cash totals, with hours and amount owed per person |
@@ -98,13 +98,23 @@ Modeled after `jose-estimate-sample.docx` — numbered scope sections, customer 
 
 ## Public estimate booker
 
-- **`book.html`** — customer-facing silver+blue scheduler (date → time → name/phone/address).
+- **`book.html`** — customer-facing scheduler. Copy: **Request appointment — Jose will confirm** (status `pending` until Confirm).
 - Live: https://miltonchoto-boop.github.io/jnh-pro-desk/book.html
-- Embed: add `?embed=1` for a tighter layout; Carrd can link “Book Estimate” here.
-- Stores appointments in the same `jnh_pro_desk_v1` localStorage (same browser/origin as Pro Desk). Confirmation also offers **mailto** to Jose so bookings aren’t lost across devices (v1).
+- Embed: `?embed=1`; Carrd can link “Book” here later (Carrd not edited in this pass).
+- **`confirm.html`** — mobile pending queue for Jose.
+- Until Google OAuth + Worker are live: localStorage fallback + mailto. See **BOOKING-SYNC.md**.
+
+## Google Calendar + Contacts sync (scaffold)
+
+See **[BOOKING-SYNC.md](./BOOKING-SYNC.md)**. Same OAuth for `jnhmasonry@gmail.com`:
+
+- Calendar freeBusy + pending hold events (Cloudflare Worker under `worker/`)
+- Rolodex ↔ Gmail Contacts two-way sync (People API; Pull / Push / Sync in Rolodex tab)
+
+Secrets stay in Worker env — never in this repo. Set `booking-config.js` `mode` to `"api"` after deploy.
 
 ## Later
 
-- PIN / password gate on `index.html` (default in Settings; `book.html` stays public)
-- Live: https://miltonchoto-boop.github.io/jnh-pro-desk/ — linked from Carrd Pro Desk footer
+- Live: https://miltonchoto-boop.github.io/jnh-pro-desk/
 - Wire OCR API into `runOcrStub`
+- Optional Carrd “Book” link only

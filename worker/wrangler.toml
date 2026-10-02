@@ -1,0 +1,21 @@
+name = "jnh-booking"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# Public vars only — secrets via `wrangler secret put`
+[vars]
+CALENDAR_ID = "primary"
+TIMEZONE = "America/New_York"
+# Default availability (same shape as Pro Desk). Override later via KV if needed.
+AVAILABILITY_JSON = "{\"slotMinutes\":60,\"workDays\":[1,2,3,4,5],\"startHour\":9,\"endHour\":17,\"lunchStart\":12,\"lunchEnd\":13,\"blockedDates\":[],\"maxPerDay\":6,\"leadDays\":1,\"horizonDays\":45}"
+
+# Required secrets (NEVER commit values):
+#   GOOGLE_CLIENT_ID
+#   GOOGLE_CLIENT_SECRET
+#   GOOGLE_REFRESH_TOKEN
+#   ADMIN_TOKEN
+#
+#   npx wrangler secret put GOOGLE_CLIENT_ID
+#   npx wrangler secret put GOOGLE_CLIENT_SECRET
+#   npx wrangler secret put GOOGLE_REFRESH_TOKEN
+#   npx wrangler secret put ADMIN_TOKEN

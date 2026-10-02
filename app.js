@@ -203,6 +203,11 @@
     var id = map[name] || "view-hub";
     var el = document.getElementById(id);
     if (el) el.classList.add("active");
+    /* Estimates workspace: hide topbar, full viewport (list + editor) */
+    var estFs = (name === "estimates" || name === "editor");
+    document.body.classList.toggle("estimates-fullscreen", estFs);
+    var backBtn = document.getElementById("btn-back-pro-desk");
+    if (backBtn) backBtn.hidden = !estFs;
     if (name === "hub") renderHub();
     if (name === "weather") { renderWeather(); if (!state.weatherData) loadWeatherPlan(); }
     if (name === "appointments") renderAppointments();
@@ -2403,7 +2408,20 @@
     var caps = normalizedCapabilities(form.capabilities.value);
     if (!form.name.value.trim() || !caps.length) { alert("Name and at least one capability are required."); return; }
     var id = form.contactId.value || uid();
-    var contact = { id: id, name: form.name.value.trim(), capabilities: caps, company: form.company.value.trim(), area: form.area.value.trim(), phone: form.phone.value.trim(), email: form.email.value.trim(), notes: form.notes.value.trim() };
+    var prev = (state.rolodexContacts || []).find(function (x) { return x.id === id; }) || {};
+    var contact = {
+      id: id,
+      name: form.name.value.trim(),
+      capabilities: caps,
+      company: form.company.value.trim(),
+      area: form.area.value.trim(),
+      phone: form.phone.value.trim(),
+      email: form.email.value.trim(),
+      notes: form.notes.value.trim(),
+      googleContactResourceName: prev.googleContactResourceName || "",
+      googleEtag: prev.googleEtag || "",
+      syncedAt: prev.syncedAt || ""
+    };
     var idx = (state.rolodexContacts || []).findIndex(function (x) { return x.id === id; });
     if (idx >= 0) state.rolodexContacts[idx] = contact; else state.rolodexContacts.push(contact);
     save();
@@ -2426,6 +2444,143 @@
     if (!c || !confirm("Delete " + (c.name || "this contact") + " from the Rolodex?")) return;
     state.rolodexContacts = state.rolodexContacts.filter(function (x) { return x.id !== id; });
     save(); renderRolodex();
+  }
+
+
+  function rolodexAdminToken() {
+    var el = $("#rolodex-admin-token");
+    var v = el && el.value ? el.value.trim() : "";
+    if (!v) {
+      var card = $("#rolodex-admin-token-card");
+      if (card) card.classList.remove("hidden");
+      v = (window.prompt("Admin token (same as Worker ADMIN_TOKEN):") || "").trim();
+      if (el && v) el.value = v;
+    }
+    return v;
+  }
+
+  function setRolodexSyncStatus(msg) {
+    var el = $("#rolodex-sync-status");
+    if (el) el.textContent = msg;
+  }
+
+  function mergeRolodexFromGoogle(remoteList) {
+    remoteList = remoteList || [];
+    var byGoogle = {};
+    var byEmail = {};
+    var byPhone = {};
+    (state.rolodexContacts || []).forEach(function (c) {
+      if (c.googleContactResourceName) byGoogle[c.googleContactResourceName] = c;
+      if (c.email) byEmail[String(c.email).toLowerCase()] = c;
+      var ph = String(c.phone || "").replace(/\D/g, "");
+      if (ph.length >= 7) byPhone[ph] = c;
+    });
+    var merged = (state.rolodexContacts || []).slice();
+    var added = 0, updated = 0;
+    remoteList.forEach(function (r) {
+      var match = (r.resourceName && byGoogle[r.resourceName]) ||
+        (r.email && byEmail[String(r.email).toLowerCase()]) ||
+        (r.phone && byPhone[String(r.phone).replace(/\D/g, "")]);
+      if (match) {
+        match.name = r.name || match.name;
+        match.phone = r.phone || match.phone;
+        match.email = r.email || match.email;
+        match.company = r.company || match.company;
+        match.notes = r.notes || match.notes;
+        if (r.capabilities && r.capabilities.length) match.capabilities = r.capabilities;
+        match.googleContactResourceName = r.resourceName || match.googleContactResourceName;
+        match.googleEtag = r.etag || match.googleEtag;
+        match.syncedAt = new Date().toISOString();
+        updated++;
+      } else {
+        var caps = r.capabilities && r.capabilities.length ? r.capabilities : ["Gmail"];
+        merged.push({
+          id: uid(),
+          name: r.name || "Unnamed",
+          capabilities: caps,
+          company: r.company || "",
+          area: r.area || "",
+          phone: r.phone || "",
+          email: r.email || "",
+          notes: r.notes || "",
+          googleContactResourceName: r.resourceName || "",
+          googleEtag: r.etag || "",
+          syncedAt: new Date().toISOString()
+        });
+        added++;
+      }
+    });
+    state.rolodexContacts = merged;
+    save();
+    renderRolodex();
+    return { added: added, updated: updated, total: merged.length };
+  }
+
+  async function rolodexPullFromGmail() {
+    if (!window.JNHBookingAPI || !window.JNHBookingAPI.apiEnabled()) {
+      setRolodexSyncStatus("Contacts API not live yet — set booking-config.js mode to \"api\" after Worker + OAuth (People API).");
+      alert("Gmail Contacts sync needs the Worker deployed with People API scopes. See BOOKING-SYNC.md.");
+      return;
+    }
+    var tok = rolodexAdminToken();
+    if (!tok) return;
+    setRolodexSyncStatus("Pulling from Gmail Contacts…");
+    try {
+      var data = await window.JNHBookingAPI.contactsList(tok);
+      var stats = mergeRolodexFromGoogle((data && data.contacts) || []);
+      setRolodexSyncStatus("Pull done · added " + stats.added + ", updated " + stats.updated + " · " + stats.total + " in Rolodex. " + new Date().toLocaleString());
+    } catch (err) {
+      setRolodexSyncStatus("Pull failed: " + (err.message || err));
+      alert("Pull failed: " + (err.message || err));
+    }
+  }
+
+  async function rolodexPushToGmail() {
+    if (!window.JNHBookingAPI || !window.JNHBookingAPI.apiEnabled()) {
+      setRolodexSyncStatus("Contacts API not live yet — see BOOKING-SYNC.md.");
+      alert("Gmail Contacts sync needs the Worker deployed. See BOOKING-SYNC.md.");
+      return;
+    }
+    var tok = rolodexAdminToken();
+    if (!tok) return;
+    setRolodexSyncStatus("Pushing Rolodex → Gmail Contacts…");
+    try {
+      var payload = (state.rolodexContacts || []).map(function (c) {
+        return {
+          id: c.id,
+          resourceName: c.googleContactResourceName || "",
+          etag: c.googleEtag || "",
+          name: c.name,
+          phone: c.phone,
+          email: c.email,
+          company: c.company,
+          area: c.area,
+          notes: c.notes,
+          capabilities: c.capabilities || []
+        };
+      });
+      var data = await window.JNHBookingAPI.contactsPush(tok, { contacts: payload });
+      var results = (data && data.results) || [];
+      results.forEach(function (r) {
+        var local = (state.rolodexContacts || []).find(function (c) { return c.id === r.id; });
+        if (local && r.resourceName) {
+          local.googleContactResourceName = r.resourceName;
+          local.googleEtag = r.etag || local.googleEtag;
+          local.syncedAt = new Date().toISOString();
+        }
+      });
+      save();
+      renderRolodex();
+      setRolodexSyncStatus("Push done · " + results.length + " contact(s) upserted to Gmail. " + new Date().toLocaleString());
+    } catch (err) {
+      setRolodexSyncStatus("Push failed: " + (err.message || err));
+      alert("Push failed: " + (err.message || err));
+    }
+  }
+
+  async function rolodexSyncBothWays() {
+    await rolodexPullFromGmail();
+    await rolodexPushToGmail();
   }
 
   // ---------- weather planning (NOAA / NWS + CPC) ----------
@@ -3369,11 +3524,31 @@
           if (!confirm("Delete this appointment?")) return;
           if (window.JNHBooking) window.JNHBooking.deleteAppointment(id);
         } else if (act === "confirm") {
-          if (window.JNHBooking) window.JNHBooking.updateAppointment(id, { status: "confirmed" });
+          (async function () {
+            try {
+              if (window.JNHBookingAPI && window.JNHBookingAPI.apiEnabled()) {
+                var tok = window.prompt("Admin token (Worker ADMIN_TOKEN) to confirm on Google Calendar:");
+                if (tok) await window.JNHBookingAPI.confirmBooking(id, tok.trim());
+              }
+            } catch (err) { console.warn(err); alert("Calendar confirm failed: " + (err.message || err)); }
+            if (window.JNHBooking) window.JNHBooking.updateAppointment(id, { status: "confirmed" });
+            syncAppointmentsFromStore(); save(); renderAppointments();
+          })();
+          return;
         } else if (act === "done") {
           if (window.JNHBooking) window.JNHBooking.updateAppointment(id, { status: "done" });
         } else if (act === "cancel") {
-          if (window.JNHBooking) window.JNHBooking.updateAppointment(id, { status: "cancelled" });
+          (async function () {
+            try {
+              if (window.JNHBookingAPI && window.JNHBookingAPI.apiEnabled()) {
+                var tok2 = window.prompt("Admin token to decline/free slot on Google Calendar (optional Cancel):");
+                if (tok2) await window.JNHBookingAPI.declineBooking(id, tok2.trim());
+              }
+            } catch (err) { console.warn(err); }
+            if (window.JNHBooking) window.JNHBooking.updateAppointment(id, { status: "cancelled" });
+            syncAppointmentsFromStore(); save(); renderAppointments();
+          })();
+          return;
         }
         syncAppointmentsFromStore();
         save();
@@ -3410,7 +3585,7 @@
         phone: payload.phone,
         address: payload.address,
         notes: payload.notes || "",
-        status: "booked",
+        status: "confirmed", // manual entries Jose creates himself are already confirmed
         source: "manual",
         createdAt: new Date().toISOString()
       };
@@ -3435,6 +3610,13 @@
         showView(tab.getAttribute("data-view"));
       });
     });
+
+    var backPro = $("#btn-back-pro-desk");
+    if (backPro) {
+      backPro.addEventListener("click", function () {
+        showView("hub");
+      });
+    }
 
     $("#btn-new-estimate").addEventListener("click", function () { openEditor(null); });
     $("#btn-back-estimates").addEventListener("click", function () { showView("estimates"); });
@@ -3486,6 +3668,9 @@
     if ($("#rolodex-search")) $("#rolodex-search").addEventListener("input", renderRolodex);
     if ($("#btn-add-rolodex")) $("#btn-add-rolodex").addEventListener("click", function () { var f = $("#rolodex-form"); f.reset(); f.contactId.value = ""; $("#btn-cancel-rolodex-edit").hidden = true; f.scrollIntoView({ behavior: "smooth" }); f.name.focus(); });
     if ($("#btn-cancel-rolodex-edit")) $("#btn-cancel-rolodex-edit").addEventListener("click", function () { var f = $("#rolodex-form"); f.reset(); f.contactId.value = ""; this.hidden = true; });
+    if ($("#btn-rolodex-pull")) $("#btn-rolodex-pull").addEventListener("click", rolodexPullFromGmail);
+    if ($("#btn-rolodex-push")) $("#btn-rolodex-push").addEventListener("click", rolodexPushToGmail);
+    if ($("#btn-rolodex-sync")) $("#btn-rolodex-sync").addEventListener("click", rolodexSyncBothWays);
 
     if ($("#weather-settings-form")) $("#weather-settings-form").addEventListener("submit", saveWeatherSettings);
     if ($("#btn-weather-refresh")) $("#btn-weather-refresh").addEventListener("click", loadWeatherPlan);

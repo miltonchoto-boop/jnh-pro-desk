@@ -1,4 +1,5 @@
-/* Shared appointment + availability store (Pro Desk + public booker). Same-origin localStorage. */
+/* Shared appointment + availability store (Pro Desk + public booker). Same-origin localStorage.
+   Public bookings default to status "pending" until Jose confirms (Calendar sync via Worker). */
 (function (global) {
   "use strict";
 
@@ -196,7 +197,7 @@
       phone: phone,
       address: address,
       notes: String(payload.notes || "").trim(),
-      status: "booked",
+      status: "pending",
       source: payload.source || "public",
       createdAt: new Date().toISOString()
     };
