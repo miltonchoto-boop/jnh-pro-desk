@@ -75,6 +75,8 @@
 
         <div class="hub-kpis" id="hub-kpis"></div>
 
+        <div class="card hub-panel hub-pipeline-panel" id="hub-pipeline" aria-label="Client pipeline monitoring"></div>
+
         <div class="hub-grid">
           <div class="card hub-panel">
             <div class="row-between">
@@ -551,9 +553,10 @@
         <div class="panel-head">
           <div>
             <h1>Job Tracker</h1>
-            <p class="muted">Sold → Scheduled → In progress → Done. Linked to estimates and time logged.</p>
+            <p class="muted">Sold → Scheduled → In progress → Done. Linked to estimates, Client Flow (Lead→…→Complete), and time logged.</p>
           </div>
           <div class="actions">
+            <button class="btn ghost" type="button" data-goto="flow">Client Flow →</button>
             <button class="btn ghost" id="btn-jobs-refresh" type="button">Refresh</button>
           </div>
         </div>
@@ -996,9 +999,13 @@
         <div class="panel-head">
           <div>
             <h1>Client Flow</h1>
-            <p class="muted">Per-client pipeline: <strong>Lead → Estimate → Sale → Design → Materials → Delivery → Job → Complete</strong>, optional <strong>Claim</strong> (insurance / warranty), issues log, and overview bar / Gantt.</p>
+            <p class="muted">Per-client pipeline: <strong>Lead → Estimate → Sale → Design → Materials → Delivery → Job → Complete</strong>, optional <strong>Claim</strong> (insurance / warranty), issues log, and overview bar / Gantt. Stays in sync with <strong>Jobs</strong> stages and Project Hub monitoring.</p>
           </div>
-          <button class="btn ghost" id="btn-flow-refresh" type="button">Refresh</button>
+          <div class="actions">
+            <button class="btn ghost" type="button" data-goto="jobs">Jobs →</button>
+            <button class="btn ghost" type="button" data-goto="hub">Hub →</button>
+            <button class="btn ghost" id="btn-flow-refresh" type="button">Refresh</button>
+          </div>
         </div>
 
         <div class="card">

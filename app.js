@@ -315,6 +315,7 @@
         e.stopPropagation();
         if (confirm("Delete estimate for " + (est.customerName || "this customer") + "?")) {
           state.estimates = state.estimates.filter(function (x) { return x.id !== est.id; });
+          removeFlowForEstimate(est.id);
           save();
           renderEstimatesList();
         }
@@ -478,6 +479,8 @@
     var idx = state.estimates.findIndex(function (e) { return e.id === est.id; });
     if (idx >= 0) state.estimates[idx] = est;
     else state.estimates.push(est);
+    syncFlowFromJobStatus(est);
+    syncMarketingClientsFromEstimates();
     save();
     alert("Estimate saved.");
     renderEstimatesList();
@@ -1243,6 +1246,48 @@
     };
   }
 
+  /** Promote Client Flow stages from Jobs/estimate jobStatus (lead→…→complete). */
+  function applyJobStatusToFlow(est, flow) {
+    if (!est || !flow || !flow.stages) return flow;
+    var js = est.jobStatus || "";
+    var date0 = est.estimateDate || todayISO();
+    function mark(id, status, start) {
+      if (!flow.stages[id]) flow.stages[id] = { status: "pending", startDate: "", endDate: "", notes: "" };
+      flow.stages[id].status = status;
+      if (start && !flow.stages[id].startDate) flow.stages[id].startDate = start;
+    }
+    if (!js) {
+      mark("lead", "done", date0);
+      if (flow.stages.estimate.status === "pending") mark("estimate", "active", date0);
+      flow.updatedAt = new Date().toISOString();
+      return flow;
+    }
+    mark("lead", "done", date0);
+    mark("estimate", "done", date0);
+    mark("sale", "done", date0);
+    if (js === "Sold") {
+      // sale complete; leave design+ unless already further
+      if (flow.stages.design.status === "pending") {
+        /* stay pending until Scheduled */
+      }
+    } else if (js === "Scheduled") {
+      if (flow.stages.design.status === "pending" || flow.stages.design.status === "active") {
+        mark("design", "active", est.jobScheduledDate || date0);
+      }
+    } else if (js === "In progress") {
+      ["design", "materials", "delivery"].forEach(function (id) { mark(id, "done", date0); });
+      if (flow.stages.job.status !== "done") {
+        mark("job", "active", est.jobScheduledDate || todayISO());
+      }
+    } else if (js === "Done") {
+      FLOW_STAGES.forEach(function (s) {
+        if (s.id !== "claim") mark(s.id, "done", date0);
+      });
+    }
+    flow.updatedAt = new Date().toISOString();
+    return flow;
+  }
+
   function ensureFlowForEstimate(est) {
     ensureSettingsShape();
     if (!Array.isArray(state.clientFlows)) state.clientFlows = [];
@@ -1253,25 +1298,40 @@
         flow.stages.estimate.startDate = est.estimateDate;
         flow.stages.lead.startDate = est.estimateDate;
       }
-      if (est.jobStatus === "Sold" || est.jobStatus === "Scheduled" || est.jobStatus === "In progress" || est.jobStatus === "Done") {
-        flow.stages.estimate.status = "done";
-        flow.stages.sale.status = "done";
-        flow.stages.sale.startDate = est.estimateDate || todayISO();
-      }
-      if (est.jobStatus === "Scheduled") { flow.stages.design.status = "active"; }
-      if (est.jobStatus === "In progress") {
-        ["design", "materials", "delivery"].forEach(function (id) { flow.stages[id].status = "done"; });
-        flow.stages.job.status = "active";
-        flow.stages.job.startDate = est.jobScheduledDate || todayISO();
-      }
-      if (est.jobStatus === "Done") {
-        FLOW_STAGES.forEach(function (s) {
-          if (s.id !== "claim") flow.stages[s.id].status = "done";
-        });
-      }
+      applyJobStatusToFlow(est, flow);
       state.clientFlows.push(flow);
     }
     return flow;
+  }
+
+  /** When Jobs / estimate jobStatus changes, keep Client Flow stages aligned. */
+  function syncFlowFromJobStatus(est) {
+    if (!est) return null;
+    var flow = ensureFlowForEstimate(est);
+    applyJobStatusToFlow(est, flow);
+    return flow;
+  }
+
+  function removeFlowForEstimate(estimateId) {
+    if (!Array.isArray(state.clientFlows)) return;
+    state.clientFlows = state.clientFlows.filter(function (f) { return f.estimateId !== estimateId; });
+  }
+
+  function activeFlowStage(flow) {
+    var stages = FLOW_STAGES.filter(function (s) {
+      return s.id !== "claim" || (flow && flow.claimEnabled);
+    });
+    var active = null;
+    stages.forEach(function (s) {
+      var st = (flow.stages[s.id] && flow.stages[s.id].status) || "pending";
+      if (st === "active" || st === "blocked") active = s;
+    });
+    if (active) return active;
+    for (var i = stages.length - 1; i >= 0; i--) {
+      var st2 = (flow.stages[stages[i].id] && flow.stages[stages[i].id].status) || "pending";
+      if (st2 === "done") return stages[i];
+    }
+    return stages[0] || null;
   }
 
   function flowProgress(flow) {
@@ -1298,7 +1358,11 @@
     var estimates = (state.estimates || []).slice().sort(function (a, b) {
       return (b.estimateDate || "").localeCompare(a.estimateDate || "");
     });
+    var flowsBefore = (state.clientFlows || []).length;
     estimates.forEach(ensureFlowForEstimate);
+    if ((state.clientFlows || []).length !== flowsBefore) {
+      try { save(); } catch (eFlowSave) {}
+    }
 
     list.innerHTML = "";
     if (!estimates.length) {
@@ -1459,11 +1523,13 @@
       flow.stages[sid].endDate = el.querySelector("[data-k=endDate]").value;
       flow.stages[sid].notes = el.querySelector("[data-k=notes]").value.trim();
     });
-    // sync jobStatus lightly from flow
+    // sync jobStatus lightly from flow → Jobs board / Hub
     if (flow.stages.job.status === "done" || flow.stages.done.status === "done") est.jobStatus = "Done";
     else if (flow.stages.job.status === "active") est.jobStatus = "In progress";
     else if (flow.stages.sale.status === "done" && flow.stages.design.status === "active") est.jobStatus = "Scheduled";
     else if (flow.stages.sale.status === "done") est.jobStatus = "Sold";
+    else if (flow.stages.estimate.status === "active" || flow.stages.estimate.status === "done") est.jobStatus = est.jobStatus || "";
+    est.updatedAt = new Date().toISOString();
     flow.updatedAt = new Date().toISOString();
     save();
     renderFlow();
@@ -1590,6 +1656,20 @@
     if ($("#btn-mkt-select-all")) $("#btn-mkt-select-all").addEventListener("click", function () { $$(".mkt-pick").forEach(function (c) { c.checked = true; }); });
     if ($("#btn-mkt-select-none")) $("#btn-mkt-select-none").addEventListener("click", function () { $$(".mkt-pick").forEach(function (c) { c.checked = false; }); });
     if ($("#blast-form")) $("#blast-form").addEventListener("submit", stubSendBlast);
+
+    // Critical: Client Flow + Project Hub + Appointments were defined but never bound
+    bindFlowUI();
+    wireHubAndAppointments();
+
+    // Cross-department nav (Jobs ↔ Flow ↔ Hub, etc.) — bind once for all static data-goto
+    $$("[data-goto]").forEach(function (btn) {
+      if (btn._deskGotoBound) return;
+      btn._deskGotoBound = true;
+      btn.addEventListener("click", function () {
+        var g = btn.getAttribute("data-goto");
+        if (g) showView(g);
+      });
+    });
   }
 
 
@@ -1685,15 +1765,21 @@
               return "<option value=\"" + s + "\"" + (s === status ? " selected" : "") + ">" + s + "</option>";
             }).join("") + "</select>" +
             "<button type=\"button\" class=\"btn small\" data-act=\"open\">Estimate</button>" +
+            "<button type=\"button\" class=\"btn small\" data-act=\"flow\">Flow</button>" +
             "<button type=\"button\" class=\"btn small\" data-act=\"time\">Time</button>" +
           "</div>";
         card.querySelector("[data-act=status]").addEventListener("change", function (e) {
           est.jobStatus = e.target.value;
           est.updatedAt = new Date().toISOString();
+          syncFlowFromJobStatus(est);
           save();
           renderJobs();
         });
         card.querySelector("[data-act=open]").addEventListener("click", function () { openEditor(est.id); });
+        card.querySelector("[data-act=flow]").addEventListener("click", function () {
+          showView("flow");
+          setTimeout(function () { openFlowEditor(est.id); }, 50);
+        });
         card.querySelector("[data-act=time]").addEventListener("click", function () {
           showView("timelog");
           setTimeout(function () {
@@ -2857,7 +2943,7 @@
       try {
         var data = JSON.parse(reader.result);
         if (data.estimates || data.employees) {
-          // full backup
+          // full backup — restore shared project/job model fields
           if (data.estimates) state.estimates = data.estimates;
           if (data.employees) state.employees = data.employees.map(function (emp) {
             emp.payType = normalizePayType(emp.payType);
@@ -2865,7 +2951,25 @@
           });
           if (data.timeEntries) state.timeEntries = data.timeEntries;
           if (data.vendors) state.vendors = data.vendors;
+          if (data.rolodexContacts) state.rolodexContacts = data.rolodexContacts;
           if (data.receipts) state.receipts = data.receipts;
+          if (data.priceBook) state.priceBook = data.priceBook;
+          if (data.settings) state.settings = data.settings;
+          if (data.refundStubs) state.refundStubs = data.refundStubs;
+          if (data.insuranceDocs) state.insuranceDocs = data.insuranceDocs;
+          if (data.fleetAssets) state.fleetAssets = data.fleetAssets;
+          if (data.fleetMaintLogs) state.fleetMaintLogs = data.fleetMaintLogs;
+          if (data.marketingClients) state.marketingClients = data.marketingClients;
+          if (data.marketingBlasts) state.marketingBlasts = data.marketingBlasts;
+          if (data.clientFlows) state.clientFlows = data.clientFlows;
+          if (data.appointments && window.JNHBooking) {
+            window.JNHBooking.saveAppointments(data.appointments);
+          }
+          if (data.availability && window.JNHBooking) {
+            window.JNHBooking.setAvailability(data.availability);
+          }
+          syncAppointmentsFromStore();
+          (state.estimates || []).forEach(function (e) { ensureFlowForEstimate(e); });
           save();
           alert("Imported Pro Desk backup.");
           showView("estimates");
@@ -2925,9 +3029,28 @@
     var receiptSum = receiptWeek.reduce(function (s, r) { return s + (Number(r.amount) || 0); }, 0);
     var vendorCount = (state.vendors || []).length;
 
+    // Client Flow monitoring (real estimates only — no invented projects)
+    var flowOpenIssues = 0;
+    var flowInPipeline = 0;
+    var stageCounts = {};
+    FLOW_STAGES.forEach(function (s) { stageCounts[s.id] = 0; });
+    var flowsBeforeHub = (state.clientFlows || []).length;
+    (state.estimates || []).forEach(function (e) {
+      var flow = ensureFlowForEstimate(e);
+      var prog = flowProgress(flow);
+      if (prog.pct < 100 || (e.jobStatus && e.jobStatus !== "Done")) flowInPipeline += 1;
+      flowOpenIssues += (flow.issues || []).filter(function (i) { return i.status !== "resolved"; }).length;
+      var cur = activeFlowStage(flow);
+      if (cur) stageCounts[cur.id] = (stageCounts[cur.id] || 0) + 1;
+    });
+    if ((state.clientFlows || []).length !== flowsBeforeHub) {
+      try { save(); } catch (eHubSave) {}
+    }
+
     var kpis = [
       { label: "Open estimates", value: String(openEst), sub: (state.estimates || []).length + " total", goto: "estimates" },
       { label: "Active jobs", value: String(activeJobs), sub: "Sold → In progress", goto: "jobs" },
+      { label: "Pipeline", value: String(flowInPipeline), sub: flowOpenIssues ? (flowOpenIssues + " open issue(s)") : "Client Flow", goto: "flow" },
       { label: "Upcoming appts", value: String(upcomingAppt), sub: "Estimate visits", goto: "appointments" },
       { label: "Payroll owed", value: money(pay.total), sub: "This week", goto: "payroll" },
       { label: "Vendors", value: String(vendorCount), sub: "Suppliers", goto: "vendors" },
@@ -2943,6 +3066,26 @@
       }).join("");
       $$(".hub-kpi[data-goto]", kpiEl).forEach(function (el) {
         el.addEventListener("click", function () { showView(el.getAttribute("data-goto")); });
+      });
+    }
+
+    // Pipeline strip (Lead → … → Complete) — status across departments
+    var pipeEl = $("#hub-pipeline");
+    if (pipeEl) {
+      var pipeStages = FLOW_STAGES.filter(function (s) { return s.id !== "claim"; });
+      pipeEl.innerHTML = '<div class="hub-pipe-head"><strong>Client pipeline</strong>' +
+        '<button type="button" class="btn small ghost" data-goto="flow">Open Client Flow →</button></div>' +
+        '<div class="hub-pipe-stages">' + pipeStages.map(function (s) {
+          var n = stageCounts[s.id] || 0;
+          return '<div class="hub-pipe-stage" data-goto="flow"><span class="n">' + n +
+            '</span><span class="lbl">' + escapeHtml(s.label) + '</span></div>';
+        }).join("") + '</div>' +
+        (flowOpenIssues
+          ? '<p class="hub-pipe-note"><span class="ins-badge soon">' + flowOpenIssues +
+            ' open issue(s)</span> across Client Flow — click a stage or Open Client Flow.</p>'
+          : '<p class="hub-pipe-note muted">Same path as Jobs stages + Client Flow (Lead → Estimate → Sale → Design → Materials → Delivery → Job → Complete).</p>');
+      $$("[data-goto=flow]", pipeEl).forEach(function (el) {
+        el.addEventListener("click", function () { showView("flow"); });
       });
     }
 

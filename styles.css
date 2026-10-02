@@ -657,3 +657,51 @@ input:focus, select:focus, textarea:focus {
 .rolodex-contact-links { display: flex; flex-wrap: wrap; gap: .4rem .7rem; font-size: .8rem; margin-top: .45rem; }
 .rolodex-contact .actions { align-items: flex-start; }
 @media (max-width: 600px) { .rolodex-contact { flex-direction: column; } .rolodex-contact .actions { align-items: flex-end; } }
+
+
+/* Project Hub — cross-department pipeline monitoring */
+.hub-pipeline-panel {
+  margin: 0 0 1rem;
+  padding: .85rem 1rem;
+}
+.hub-pipe-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .65rem;
+}
+.hub-pipe-head strong { color: var(--gold-soft); font-size: .95rem; }
+.hub-pipe-stages {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: .4rem;
+}
+@media (max-width: 900px) {
+  .hub-pipe-stages { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.hub-pipe-stage {
+  background: rgba(20, 36, 64, .55);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: .55rem .35rem;
+  text-align: center;
+  cursor: pointer;
+  transition: .15s;
+}
+.hub-pipe-stage:hover { border-color: var(--gold-dim); transform: translateY(-1px); }
+.hub-pipe-stage .n {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--gold);
+  line-height: 1.1;
+}
+.hub-pipe-stage .lbl {
+  display: block;
+  margin-top: .2rem;
+  font-size: .65rem;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+.hub-pipe-note { margin: .65rem 0 0; font-size: .8rem; }
