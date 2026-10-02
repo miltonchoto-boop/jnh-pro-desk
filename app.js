@@ -115,8 +115,10 @@
       state.marketingClients = data.marketingClients || [];
       state.marketingBlasts = data.marketingBlasts || [];
       state.clientFlows = data.clientFlows || [];
-      if (!state.settings) state.settings = { googleReviewUrl: "", stripePublishableKey: "", stripePaymentLinkBase: "", stripeMode: "test", paymentFeeNote: "", absorbFees: false, deskPassword: "jnh2026" };
+      if (!state.settings) state.settings = { googleReviewUrl: "", stripePublishableKey: "", stripePaymentLinkBase: "", stripeMode: "test", paymentFeeNote: "", absorbFees: false, deskPassword: "jnh2026", standardLaborRate: 0, defaultLaborHours: 0 };
       if (state.settings && !state.settings.deskPassword) state.settings.deskPassword = "jnh2026";
+      if (state.settings && (state.settings.standardLaborRate == null || state.settings.standardLaborRate === "")) state.settings.standardLaborRate = 0;
+      if (state.settings && (state.settings.defaultLaborHours == null || state.settings.defaultLaborHours === "")) state.settings.defaultLaborHours = 0;
       syncAppointmentsFromStore();
       if (employeeMigrationNeeded) save();
     } catch (e) {
@@ -253,6 +255,8 @@
     if (name === "marketing") renderMarketing();
     if (name === "flow") renderFlow();
     if (name === "editor") renderEstimateInsuranceAttach();
+    if (name === "settings") fillLaborSettingsForm();
+    if (name === "estimates") syncLaborPricingUI(null);
     updateEstimateToolbar();
   }
 
@@ -272,6 +276,76 @@
     return { labor: labor, materials: mats, grand: labor + mats };
   }
 
+  function getStandardLaborRate() {
+    ensureSettingsShape();
+    var n = Number(state.settings.standardLaborRate);
+    return isFinite(n) && n >= 0 ? n : 0;
+  }
+
+  function getDefaultLaborHours() {
+    ensureSettingsShape();
+    var n = Number(state.settings.defaultLaborHours);
+    return isFinite(n) && n > 0 ? n : 0;
+  }
+
+  function hasLaborRateOverride(est) {
+    if (!est) return false;
+    var v = est.laborRateOverride;
+    return v !== null && v !== undefined && v !== "";
+  }
+
+  function effectiveJobLaborRate(est) {
+    if (hasLaborRateOverride(est)) {
+      var n = Number(est.laborRateOverride);
+      return isFinite(n) && n >= 0 ? n : 0;
+    }
+    return getStandardLaborRate();
+  }
+
+  function formatLaborRateLabel(rate) {
+    return money(rate) + "/hr";
+  }
+
+  function syncLaborPricingUI(est) {
+    var draft = est || window.__draftEstimate;
+    var std = getStandardLaborRate();
+    var stdLabel = formatLaborRateLabel(std);
+    var listLabel = $("#estimates-standard-rate-label");
+    if (listLabel) listLabel.textContent = stdLabel;
+    var stdEl = $("#est-standard-labor-rate");
+    if (stdEl) stdEl.textContent = stdLabel;
+    var note = $("#est-labor-effective-note");
+    if (!note) return;
+    if (!draft) {
+      note.textContent = "Open or create an estimate to set a job override.";
+      note.classList.remove("is-override");
+      return;
+    }
+    var eff = effectiveJobLaborRate(draft);
+    if (hasLaborRateOverride(draft)) {
+      note.textContent = "This job overrides the standard — new lines use " + formatLaborRateLabel(eff) + " (standard stays " + stdLabel + ").";
+      note.classList.add("is-override");
+    } else {
+      note.textContent = "Using standard rate " + stdLabel + " for new lines. Enter a job rate above to override this estimate only.";
+      note.classList.remove("is-override");
+    }
+  }
+
+  function readLaborFieldsFromForm(draft) {
+    var form = $("#estimate-form");
+    if (!form || !draft) return;
+    var overrideInput = form.laborRateOverride;
+    var hoursInput = form.laborHours;
+    if (overrideInput) {
+      var raw = String(overrideInput.value || "").trim();
+      draft.laborRateOverride = raw === "" ? null : (parseFloat(raw) || 0);
+    }
+    if (hoursInput) {
+      var hrsRaw = String(hoursInput.value || "").trim();
+      draft.laborHours = hrsRaw === "" ? null : (parseFloat(hrsRaw) || 0);
+    }
+  }
+
   function blankEstimate() {
     return {
       id: uid(),
@@ -286,8 +360,10 @@
         { title: "Walls", body: "" },
         { title: "Pavers", body: "" }
       ],
+      laborRateOverride: null,
+      laborHours: (function () { var h = getDefaultLaborHours(); return h > 0 ? h : null; })(),
       lines: [
-        { description: "", qty: 1, unit: "sf", laborRate: 0, materialCost: 0 }
+        { description: "", qty: 1, unit: "sf", laborRate: getStandardLaborRate(), materialCost: 0 }
       ],
       depositAmount: 0,
       depositNotes: "",
@@ -308,6 +384,7 @@
   }
 
   function renderEstimatesList() {
+    syncLaborPricingUI(null);
     var list = $("#estimates-list");
     var empty = $("#estimates-empty");
     list.innerHTML = "";
@@ -330,6 +407,10 @@
         "<div class=\"meta\">" +
           (est.jobStatus ? "<span class=\"badge\">" + escapeHtml(est.jobStatus) + "</span> " : "") +
           "<span class=\"pay-pill pay-" + escapeHtml((est.paymentStatus || "Unpaid").replace(/\s+/g, "-").toLowerCase()) + "\">" + escapeHtml(est.paymentStatus || "Unpaid") + "</span>" +
+        "</div>" +
+        "<div class=\"meta labor-meta\">Labor: <strong>" + escapeHtml(formatLaborRateLabel(effectiveJobLaborRate(est))) + "</strong>" +
+          (hasLaborRateOverride(est) ? " <span class=\"badge\">job override</span>" : " <span class=\"muted\">(standard)</span>") +
+          (est.laborHours != null && est.laborHours !== "" ? " · " + escapeHtml(String(est.laborHours)) + " hrs planned" : "") +
         "</div>" +
         "<div class=\"price\">" + money(tot.grand) + "</div>" +
         "<div class=\"card-actions\">" +
@@ -390,9 +471,22 @@
     if (form.paymentStatus) form.paymentStatus.value = est.paymentStatus || "Unpaid";
     if (form.amountPaid) form.amountPaid.value = est.amountPaid || "";
     if (form.paymentLink) form.paymentLink.value = est.paymentLink || "";
+    if (form.laborRateOverride) {
+      form.laborRateOverride.value = hasLaborRateOverride(est) ? est.laborRateOverride : "";
+    }
+    if (form.laborHours) {
+      form.laborHours.value = (est.laborHours != null && est.laborHours !== "") ? est.laborHours : "";
+    }
+    if (window.__draftEstimate) {
+      if (!hasLaborRateOverride(window.__draftEstimate) && window.__draftEstimate.laborRateOverride !== null) {
+        window.__draftEstimate.laborRateOverride = null;
+      }
+      if (window.__draftEstimate.laborHours === undefined) window.__draftEstimate.laborHours = null;
+    }
     renderScopeSections(est.sections || []);
     renderLines(est.lines || []);
     recalcTotals();
+    syncLaborPricingUI(window.__draftEstimate);
     showView("editor");
     applyEstimateLockState();
     renderEstimateInsuranceAttach();
@@ -604,6 +698,7 @@
     draft.depositNotes = form.depositNotes.value.trim();
     draft.paymentTerms = form.paymentTerms.value.trim();
     draft.includeDisclosures = form.includeDisclosures.checked;
+    readLaborFieldsFromForm(draft);
     if (window.__draftEstimate && Array.isArray(window.__draftEstimate.insuranceDocIds)) {
       draft.insuranceDocIds = window.__draftEstimate.insuranceDocIds.slice();
     } else if (!Array.isArray(draft.insuranceDocIds)) {
@@ -723,6 +818,8 @@
   function ensureSettingsShape() {
     if (!state.settings) state.settings = defaultSettings();
     if (!state.settings.deskPassword) state.settings.deskPassword = DEFAULT_DESK_PASSWORD;
+    if (state.settings.standardLaborRate == null || state.settings.standardLaborRate === "") state.settings.standardLaborRate = 0;
+    if (state.settings.defaultLaborHours == null || state.settings.defaultLaborHours === "") state.settings.defaultLaborHours = 0;
     if (!Array.isArray(state.insuranceDocs)) state.insuranceDocs = [];
     if (!Array.isArray(state.fleetAssets)) state.fleetAssets = [];
     if (!Array.isArray(state.fleetMaintLogs)) state.fleetMaintLogs = [];
@@ -1838,6 +1935,8 @@
       paymentFeeNote: STRIPE_FEE_NOTE,
       absorbFees: false,
       deskPassword: "jnh2026",
+      standardLaborRate: 0,
+      defaultLaborHours: 0,
       weatherLocationName: "Suffolk County, NY",
       weatherLatitude: 40.7891,
       weatherLongitude: -73.1350
@@ -2016,7 +2115,7 @@
       description: item.name,
       qty: 1,
       unit: item.unit || "sf",
-      laborRate: 0,
+      laborRate: effectiveJobLaborRate(window.__draftEstimate),
       materialCost: Number(item.lastCost) || 0,
       priceBookId: item.id
     });
@@ -2259,6 +2358,38 @@
     save();
     renderPayments();
     alert("Refund stub recorded locally ($" + n.toFixed(2) + "). Complete the refund in Stripe Dashboard until the OCR/API server handles Refunds.");
+  }
+
+
+  function fillLaborSettingsForm() {
+    ensureSettingsShape();
+    var rate = $("#settings-standard-labor-rate");
+    var hours = $("#settings-default-labor-hours");
+    if (rate && document.activeElement !== rate) rate.value = state.settings.standardLaborRate != null ? state.settings.standardLaborRate : 0;
+    if (hours && document.activeElement !== hours) hours.value = state.settings.defaultLaborHours != null ? state.settings.defaultLaborHours : "";
+    syncLaborPricingUI(window.__draftEstimate || null);
+  }
+
+  function saveLaborSettings(e) {
+    e.preventDefault();
+    ensureSettingsShape();
+    var rateEl = $("#settings-standard-labor-rate");
+    var hoursEl = $("#settings-default-labor-hours");
+    var rate = parseFloat(rateEl && rateEl.value);
+    var hoursRaw = hoursEl ? String(hoursEl.value || "").trim() : "";
+    var hours = hoursRaw === "" ? 0 : (parseFloat(hoursRaw) || 0);
+    if (!isFinite(rate) || rate < 0) {
+      var bad = $("#labor-settings-msg");
+      if (bad) bad.textContent = "Enter a valid standard labor rate ($/hour).";
+      return;
+    }
+    state.settings.standardLaborRate = rate;
+    state.settings.defaultLaborHours = hours >= 0 ? hours : 0;
+    save();
+    fillLaborSettingsForm();
+    var msg = $("#labor-settings-msg");
+    if (msg) msg.textContent = "Labor settings saved. New estimates use " + formatLaborRateLabel(rate) + (hours > 0 ? (" · default " + hours + " hrs") : "") + ".";
+    syncLaborPricingUI(window.__draftEstimate || null);
   }
 
   function saveStripeSettings(e) {
@@ -3822,7 +3953,17 @@
       renderScopeSections(window.__draftEstimate.sections);
     });
     $("#btn-add-line").addEventListener("click", function () {
-      window.__draftEstimate.lines.push({ description: "", qty: 1, unit: "sf", laborRate: 0, materialCost: 0 });
+      readLaborFieldsFromForm(window.__draftEstimate);
+      var rate = effectiveJobLaborRate(window.__draftEstimate);
+      var hrs = Number(window.__draftEstimate.laborHours);
+      var useHours = isFinite(hrs) && hrs > 0;
+      window.__draftEstimate.lines.push({
+        description: "",
+        qty: useHours ? hrs : 1,
+        unit: useHours ? "hours" : "sf",
+        laborRate: rate,
+        materialCost: 0
+      });
       renderLines(window.__draftEstimate.lines);
       recalcTotals();
     });
@@ -3918,11 +4059,28 @@
     if ($("#btn-review-email-qr")) $("#btn-review-email-qr").addEventListener("click", function () { openReviewEmail(true); });
 
     if ($("#stripe-settings-form")) $("#stripe-settings-form").addEventListener("submit", saveStripeSettings);
+    if ($("#labor-settings-form")) $("#labor-settings-form").addEventListener("submit", saveLaborSettings);
+    var laborOverrideInput = $("#est-labor-rate-override");
+    var laborHoursInput = $("#est-labor-hours");
+    function onEstimateLaborFieldChange() {
+      if (!window.__draftEstimate) return;
+      readLaborFieldsFromForm(window.__draftEstimate);
+      syncLaborPricingUI(window.__draftEstimate);
+    }
+    if (laborOverrideInput) {
+      laborOverrideInput.addEventListener("input", onEstimateLaborFieldChange);
+      laborOverrideInput.addEventListener("change", onEstimateLaborFieldChange);
+    }
+    if (laborHoursInput) {
+      laborHoursInput.addEventListener("input", onEstimateLaborFieldChange);
+      laborHoursInput.addEventListener("change", onEstimateLaborFieldChange);
+    }
     if ($("#btn-payments-refresh")) $("#btn-payments-refresh").addEventListener("click", renderPayments);
 
     if (!state.settings) state.settings = defaultSettings();
     if (!state.settings.deskPassword) state.settings.deskPassword = "jnh2026";
     ensureSettingsShape();
+    fillLaborSettingsForm();
     ensurePriceBook();
     bindAddonUI();
     applyGateUI();

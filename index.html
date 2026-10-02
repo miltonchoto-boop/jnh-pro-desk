@@ -431,7 +431,7 @@
         <div class="panel-head">
           <div>
             <h1>Estimates</h1>
-            <p class="muted">Create professional estimates with labor, materials, and scope sections.</p>
+            <p class="muted">Create professional estimates with labor, materials, and scope sections. Standard labor rate: <strong id="estimates-standard-rate-label">$—/hr</strong> <span class="muted">(set in Settings · override per job below).</span></p>
           </div>
           <div class="actions">
             <button class="btn ghost" id="btn-import-json" type="button">Import JSON</button>
@@ -521,6 +521,24 @@
               <button class="btn small" id="btn-add-section" type="button">+ Add Section</button>
             </div>
             <div id="scope-sections" class="stack tight"></div>
+          </div>
+
+          <div class="card labor-pricing-card">
+            <h2>Labor pricing</h2>
+            <p class="muted">Company <strong>standard</strong> rate lives in Settings and seeds every new estimate. Override below for <strong>this job only</strong> — it does not change the global standard.</p>
+            <div class="labor-pricing-grid">
+              <div class="labor-standard-pill" title="From Settings">
+                <span class="muted">Standard labor rate</span>
+                <strong id="est-standard-labor-rate">$0.00/hr</strong>
+              </div>
+              <label>This job’s labor rate ($/hr)
+                <input type="number" name="laborRateOverride" id="est-labor-rate-override" min="0" step="0.01" placeholder="Blank = use standard" />
+              </label>
+              <label>This job’s hours (optional)
+                <input type="number" name="laborHours" id="est-labor-hours" min="0" step="0.25" placeholder="Planned hours for this job" />
+              </label>
+            </div>
+            <p class="muted" id="est-labor-effective-note" role="status">New lines use the standard rate.</p>
           </div>
 
           <div class="card">
@@ -1163,6 +1181,25 @@
               <button class="btn ghost" type="button" id="btn-lock-from-settings">Lock desk now</button>
             </div>
             <p id="password-settings-msg" class="muted" role="status"></p>
+          </form>
+        </div>
+        <div class="card">
+          <h2>Estimates — Labor pricing</h2>
+          <p class="muted">Standard rate ($/hour) governs every <strong>new</strong> estimate and new line items. Jose can still override rate and/or hours on each estimate without changing this company default.</p>
+          <form id="labor-settings-form" class="stack" autocomplete="off">
+            <div class="grid-2">
+              <label>Standard labor rate ($/hour)
+                <input type="number" name="standardLaborRate" id="settings-standard-labor-rate" min="0" step="0.01" placeholder="e.g. 85.00" />
+              </label>
+              <label>Default hours (optional)
+                <input type="number" name="defaultLaborHours" id="settings-default-labor-hours" min="0" step="0.25" placeholder="e.g. 8" />
+              </label>
+            </div>
+            <p class="muted">Default hours pre-fills the “This job’s hours” field on new estimates. Leave blank if you prefer to set hours per job.</p>
+            <div class="actions">
+              <button class="btn primary" type="submit">Save labor settings</button>
+            </div>
+            <p id="labor-settings-msg" class="muted" role="status"></p>
           </form>
         </div>
       </section>

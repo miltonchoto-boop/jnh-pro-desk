@@ -814,3 +814,40 @@ body.estimates-fullscreen .btn-back-pro-desk {
     padding: 6.35rem 0.75rem 2rem; /* room for toolbar and fixed Back button */
   }
 }
+
+/* Labor pricing (settings + estimate editor) */
+.labor-pricing-card .labor-pricing-grid {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) 1fr 1fr;
+  gap: .85rem 1rem;
+  align-items: end;
+  margin-bottom: .65rem;
+}
+.labor-standard-pill {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  padding: .7rem .85rem;
+  border: 1px solid var(--border-gold);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(93, 156, 240, .12), rgba(197, 208, 222, .06));
+}
+.labor-standard-pill strong {
+  font-size: 1.15rem;
+  color: var(--gold);
+}
+.labor-pricing-card #est-labor-effective-note {
+  margin: 0;
+  font-size: .9rem;
+}
+.labor-pricing-card #est-labor-effective-note.is-override {
+  color: var(--gold-soft);
+}
+body.estimates-fullscreen .labor-pricing-card {
+  border-color: var(--border-gold);
+}
+@media (max-width: 820px) {
+  .labor-pricing-card .labor-pricing-grid {
+    grid-template-columns: 1fr;
+  }
+}

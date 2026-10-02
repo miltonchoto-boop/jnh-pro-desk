@@ -26,7 +26,7 @@ Path: `/workspace/jnh-masonry/pro-desk/index.html`
 |-----|----------------|
 | **Hub** | Visual project command center — KPIs, jobs kanban, 14-day timeline (appointments + scheduled jobs), payroll & spend snapshot |
 | **Appointments** | Admin availability (days/hours/slots) + booked estimate appointments list; drives public booker |
-| **Estimates** | Full-viewport workspace (hides topbar; **Back to Pro Desk** returns to Hub). Customer fields, multi-section Scope of Work, labor+material line items with auto totals, disclosures, payment terms placeholders, print/PDF-ready HTML, JSON save/export/import |
+| **Estimates** | Full-viewport workspace (hides topbar; **Back to Pro Desk** returns to Hub). Customer fields, multi-section Scope of Work, **standard vs job labor rate** ($/hr) + optional job hours, labor+material line items with auto totals, disclosures, payment terms placeholders, print/PDF-ready HTML, JSON save/export/import |
 | **Employees** | Crew roster with hourly pay rates and pay type: On books (NY payroll) or Cash |
 | **Time Log** | Hours per worker / job / day; entries retain the rate used when logged |
 | **Weekly Payroll** | Sun–Sat summary split into On books vs Cash totals, with hours and amount owed per person |
@@ -41,7 +41,7 @@ Path: `/workspace/jnh-masonry/pro-desk/index.html`
 | **Client Flow** | Lead→Estimate→Sale→Design→Materials→Delivery→Job→Complete + optional Claim; issues log; Gantt overview |
 | **Marketing** | Client list + email/SMS blast composer (send stubbed until Twilio/email API) |
 | **Weather** | NOAA/NWS 5-day field window with precipitation + humidity emphasis, active alerts, and NOAA CPC next-month temperature/precipitation outlook |
-| **Settings** | Change desk password / lock |
+| **Settings** | Change desk password / lock; **standard labor rate** ($/hr) + optional default hours for new estimates |
 | **Payments** | Stripe-ready: publishable key, Payment Link stubs, deposit/invoice, mark paid, refund stub, fee note |
 
 ## Estimate print header
