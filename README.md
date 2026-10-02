@@ -115,6 +115,17 @@ See **[BOOKING-SYNC.md](./BOOKING-SYNC.md)**. Same OAuth for `jnhmass@gmail.com`
 
 Secrets stay in Worker env — never in this repo. Set `booking-config.js` `mode` to `"api"` after deploy.
 
+
+## Chat Advisor (JNH only)
+
+In-desk ChatGPT advisor for Jose — **not shared** with other Milton businesses. See **[CHAT-ADVISOR.md](./CHAT-ADVISOR.md)**.
+
+- Hub card **Login to Chat** reuses the existing Pro Desk session (`sessionStorage` key `jnh_pro_desk_unlocked`, default password `jnh2026`).
+- Estimates: **Review with Chat** opens a left-side panel that reviews the current estimate.
+- **Accept** writes suggested line items, deposit, payment terms, and job notes into the open estimate (then Save).
+- Modes: Estimate · Marketing · Email · Text.
+- Default is **demo/mock** advice. Live OpenAI needs Worker secret `OPENAI_API_KEY` (never in the frontend) plus `chat-config.js` `mode: "api"`.
+
 ## Later
 
 - Live: https://miltonchoto-boop.github.io/jnh-pro-desk/

@@ -45,6 +45,7 @@ apiBase: "https://jnh-booking.<your-subdomain>.workers.dev"
 | POST | `/contacts/push` | Bearer ADMIN_TOKEN | Upsert Rolodex contacts to Gmail |
 | POST | `/contacts/sync` | Bearer ADMIN_TOKEN | List remote + push local batch |
 | GET | `/health` | public | Liveness |
+| POST | `/chat` | public (JNH desk) | ChatGPT advisor proxy. Uses `OPENAI_API_KEY` secret. Mock JSON if secret missing. |
 
 CORS is open in the scaffold — tighten to the GitHub Pages origin after deploy.
 
@@ -61,3 +62,13 @@ CORS is open in the scaffold — tighten to the GitHub Pages origin after deploy
 | area | userDefined key `jnh_area` |
 | id | userDefined key `jnh_pro_desk_id` |
 | googleContactResourceName | resourceName |
+
+
+## Chat Advisor secret
+
+```bash
+npx wrangler secret put OPENAI_API_KEY
+npx wrangler deploy
+```
+
+Do not put the key in `chat-config.js`. See repo root `CHAT-ADVISOR.md`.

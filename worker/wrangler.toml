@@ -19,3 +19,8 @@ AVAILABILITY_JSON = "{\"slotMinutes\":60,\"workDays\":[1,2,3,4,5],\"startHour\":
 #   npx wrangler secret put GOOGLE_CLIENT_SECRET
 #   npx wrangler secret put GOOGLE_REFRESH_TOKEN
 #   npx wrangler secret put ADMIN_TOKEN
+
+# Chat Advisor (JNH only — separate from other Milton businesses):
+#   OPENAI_API_KEY   (secret — never commit)
+#   OPENAI_MODEL     optional public var, default gpt-4o-mini
+#   npx wrangler secret put OPENAI_API_KEY

@@ -78,6 +78,7 @@
           <button class="tab" data-view="receipts" type="button">Receipts</button>
           <button class="tab" data-view="settings" type="button">Settings</button>
         </nav>
+        <button class="btn small" id="btn-open-chat" type="button" data-open-advisor data-advisor-mode="estimate" title="Chat Advisor">Chat</button>
         <button class="btn ghost small" id="btn-lock-desk" type="button" title="Lock Pro Desk">Lock</button>
       </div>
     </header>
@@ -91,6 +92,7 @@
       <button class="btn small" id="btn-estimates-print" type="button">Print Estimate</button>
       <button class="btn small" id="btn-estimates-email" type="button">Email Estimate</button>
       <button class="btn small" id="btn-estimates-text" type="button">Text Estimate</button>
+      <button class="btn small" id="btn-estimates-review-chat-tb" type="button" data-open-advisor data-advisor-mode="estimate" data-advisor-auto="1">Review with Chat</button>
     </div>
 
     <main>
@@ -109,6 +111,22 @@
         </div>
 
         <div class="hub-kpis" id="hub-kpis"></div>
+
+
+        <div class="card hub-panel hub-chat-card" id="hub-chat-card" aria-label="Chat Advisor">
+          <div class="row-between hub-chat-head">
+            <div>
+              <h2>Login to Chat</h2>
+              <p class="muted" style="margin:.35rem 0 0">Open the JNH Chat Advisor (same Pro Desk unlock session — password <code>jnh2026</code> by default). Review estimates, accept suggested line-item changes, or draft marketing / email / text copy. API key never sits in the browser.</p>
+            </div>
+            <div class="actions hub-chat-actions">
+              <button class="btn primary" type="button" data-open-advisor data-advisor-mode="estimate" id="btn-hub-login-chat">Open Chat Advisor</button>
+              <button class="btn ghost" type="button" data-open-advisor data-advisor-mode="marketing">Draft marketing</button>
+            </div>
+          </div>
+          <p class="muted hub-chat-hint" id="hub-chat-hint">Demo mode until Worker + <code>OPENAI_API_KEY</code> — see README / CHAT-ADVISOR.md.</p>
+        </div>
+
 
         <div class="card hub-panel hub-pipeline-panel" id="hub-pipeline" aria-label="Client pipeline monitoring"></div>
 
@@ -436,6 +454,7 @@
           <div class="actions">
             <button class="btn ghost" id="btn-import-json" type="button">Import JSON</button>
             <input type="file" id="import-file" accept="application/json,.json" hidden />
+            <button class="btn" type="button" id="btn-estimates-review-chat" data-open-advisor data-advisor-mode="estimate" data-advisor-auto="1">Review with Chat</button>
             <button class="btn primary" id="btn-new-estimate" type="button">+ New Estimate</button>
           </div>
         </div>
@@ -453,6 +472,7 @@
           <div class="actions">
             <button class="btn ghost" id="btn-export-estimate" type="button">Export JSON</button>
             <button class="btn ghost" id="btn-preview-print" type="button">Print / PDF</button>
+            <button class="btn" type="button" id="btn-editor-review-chat" data-open-advisor data-advisor-mode="estimate" data-advisor-auto="1">Review with Chat</button>
             <button class="btn primary" id="btn-save-estimate" type="button">Save Estimate</button>
           </div>
         </div>
@@ -1003,6 +1023,7 @@
           </div>
           <div class="actions">
             <button class="btn ghost" id="btn-mkt-sync" type="button">Sync from estimates</button>
+            <button class="btn" type="button" data-open-advisor data-advisor-mode="marketing">Draft with Chat</button>
             <button class="btn primary" id="btn-add-mkt-client" type="button">+ Add client</button>
           </div>
         </div>
@@ -1508,8 +1529,45 @@
     </footer>
   </div>
 
+
+  <div id="advisor-backdrop" class="advisor-backdrop" aria-hidden="true"></div>
+  <aside id="advisor-panel" class="advisor-panel" aria-hidden="true" aria-label="JNH Chat Advisor">
+    <div class="advisor-header">
+      <div>
+        <h2>Chat Advisor</h2>
+        <span id="advisor-mode-badge" class="advisor-mode-badge mock">Demo / mock advice</span>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn ghost small" id="advisor-clear" title="Clear chat">Clear</button>
+        <button type="button" class="btn ghost small" id="advisor-close" aria-label="Close chat">✕</button>
+      </div>
+    </div>
+    <div class="advisor-chips" role="tablist" aria-label="Advisor mode">
+      <button type="button" class="advisor-chip active" data-mode="estimate">Estimate</button>
+      <button type="button" class="advisor-chip" data-mode="marketing">Marketing</button>
+      <button type="button" class="advisor-chip" data-mode="email">Email</button>
+      <button type="button" class="advisor-chip" data-mode="sms">Text</button>
+    </div>
+    <div id="advisor-messages" class="advisor-messages" role="log" aria-live="polite"></div>
+    <div id="advisor-suggest-box" class="advisor-suggest-box hidden">
+      <p id="advisor-suggest-summary" class="muted"></p>
+      <div class="actions">
+        <button type="button" class="btn primary" id="advisor-accept">Accept</button>
+        <button type="button" class="btn ghost" id="advisor-dismiss-suggest">Dismiss</button>
+      </div>
+    </div>
+    <form id="advisor-form" class="advisor-compose" onsubmit="return false;">
+      <textarea id="advisor-input" rows="2" placeholder="Ask about this estimate, or draft email / text / marketing…"></textarea>
+      <button type="button" class="btn primary" id="advisor-send">Send</button>
+    </form>
+    <p id="advisor-status" class="advisor-status mock">Demo mode</p>
+  </aside>
+
   <div id="print-root" class="print-only" aria-hidden="true"></div>
+  <script src="booking-config.js"></script>
   <script src="booking-store.js"></script>
+  <script src="chat-config.js"></script>
   <script src="app.js"></script>
+  <script src="advisor.js"></script>
 </body>
 </html>

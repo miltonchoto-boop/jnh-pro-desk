@@ -466,6 +466,137 @@ async function handleContactsSync(request, env) {
   return json({ ok: true, contacts: remote, results, note: "Client should merge remote into Rolodex then keep resourceNames from results" });
 }
 
+
+const SYSTEM_PROMPT = `You are the in-house advisor for JNH Masonry Inc. only (Jose Hernandez). Do not mention or mix in other businesses.
+Help with: reviewing masonry estimates (scope, line items, labor vs materials, deposit, payment terms, job notes) and drafting marketing, email, and SMS copy.
+Tone: practical, Suffolk County NY home-improvement contractor, licensed & insured. Not legal advice.
+When suggesting estimate edits, include a JSON object on its own fenced block with keys:
+{"reply":"short summary","suggestions":{"lines":[{"description","qty","unit","laborRate","materialCost"}],"sections":[{"title","body"}],"depositAmount":number,"depositNotes":"","paymentTerms":"","jobNotes":""}}
+Only include suggestion keys you actually want applied. units: sf, lf, ea, hours, ton, bag, pallet, ls.
+When drafting copy, include:
+{"reply":"short summary","copy":{"kind":"marketing|email|sms","subject":"","body":"","to":""}}
+Also write the human-readable reply outside the JSON so the UI can show it. Keep SMS under 320 characters.`;
+
+function mockWorkerChat(body) {
+  const mode = body.mode || "estimate";
+  const est = body.estimate;
+  if (mode === "marketing") {
+    return {
+      source: "mock-worker",
+      reply: "Marketing draft (Worker mock — set OPENAI_API_KEY for live ChatGPT).",
+      copy: {
+        kind: "marketing",
+        subject: "JNH Masonry — book your estimate",
+        body: "Hi {{name}}, Jose at JNH Masonry Inc. We're scheduling walls, pavers, and repairs. Licensed & insured. Call 631-965-1754 or visit jnhmas.com.",
+      },
+    };
+  }
+  if (mode === "email") {
+    return {
+      source: "mock-worker",
+      reply: "Email draft (Worker mock).",
+      copy: {
+        kind: "email",
+        subject: est && est.estimateNumber ? "JNH Masonry estimate " + est.estimateNumber : "Your JNH Masonry estimate",
+        body: "Hi " + ((est && est.customerName) || "there") + ",\n\nPlease review your estimate from JNH Masonry Inc. Happy to walk the scope.\n\nJose Hernandez\n631-965-1754",
+        to: (est && est.customerEmail) || "",
+      },
+    };
+  }
+  if (mode === "sms") {
+    return {
+      source: "mock-worker",
+      reply: "Text draft (Worker mock).",
+      copy: {
+        kind: "sms",
+        body: "Jose at JNH Masonry — your estimate is ready. Questions? Call/text 631-965-1754.",
+        to: (est && est.customerPhone) || "",
+      },
+    };
+  }
+  return {
+    source: "mock-worker",
+    reply: "Estimate review (Worker mock — no OPENAI_API_KEY yet). Accept to apply a deposit + notes refresh if an estimate is open.",
+    suggestions: est
+      ? {
+          depositAmount: est.depositAmount > 0 ? est.depositAmount : Math.round(((est.totals && est.totals.grand) || 0) * 0.3) || 1500,
+          depositNotes: est.depositNotes || "Required to order materials",
+          paymentTerms: est.paymentTerms || "Deposit due on acceptance. Balance due upon completion.",
+          jobNotes: est.jobNotes || "Confirm site access and material staging.",
+        }
+      : null,
+  };
+}
+
+async function handleChat(request, env) {
+  let body = {};
+  try { body = await request.json(); } catch { body = {}; }
+  const message = String(body.message || "").trim();
+  if (!message) return json({ error: "message required" }, 400);
+
+  if (!env.OPENAI_API_KEY) {
+    return json(mockWorkerChat(body));
+  }
+
+  const history = Array.isArray(body.messages) ? body.messages.slice(-12) : [];
+  const estText = body.estimate ? JSON.stringify(body.estimate).slice(0, 12000) : "(no estimate open)";
+  const userContent =
+    "Mode: " + (body.mode || "estimate") +
+    "\nBusiness: " + (body.business || "JNH Masonry Inc.") +
+    "\nCurrent estimate JSON:\n" + estText +
+    "\n\nJose says:\n" + message;
+
+  const messages = [{ role: "system", content: SYSTEM_PROMPT }]
+    .concat(history.filter((m) => m && (m.role === "user" || m.role === "assistant") && m.content).map((m) => ({
+      role: m.role,
+      content: String(m.content).slice(0, 4000),
+    })))
+    .concat([{ role: "user", content: userContent }]);
+
+  const model = env.OPENAI_MODEL || body.model || "gpt-4o-mini";
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + env.OPENAI_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.4,
+      messages,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return json({ error: data.error?.message || "OpenAI request failed", source: "openai" }, res.status);
+  }
+  const reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
+    ? data.choices[0].message.content
+    : "";
+
+  let suggestions = null;
+  let copy = null;
+  let cleanReply = reply;
+  const fence = reply.match(/```json\s*([\s\S]*?)```/i);
+  if (fence) {
+    try {
+      const parsed = JSON.parse(fence[1]);
+      if (parsed.suggestions) suggestions = parsed.suggestions;
+      if (parsed.copy) copy = parsed.copy;
+      if (parsed.reply) cleanReply = parsed.reply;
+      else cleanReply = reply.replace(fence[0], "").trim();
+    } catch { /* keep raw reply */ }
+  }
+  return json({
+    ok: true,
+    source: "openai",
+    model,
+    reply: cleanReply || reply,
+    suggestions,
+    copy,
+  });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
@@ -486,6 +617,7 @@ export default {
       if (path === "/contacts" && request.method === "GET") return await handleContactsList(request, env);
       if (path === "/contacts/push" && request.method === "POST") return await handleContactsPush(request, env);
       if (path === "/contacts/sync" && request.method === "POST") return await handleContactsSync(request, env);
+      if (path === "/chat" && request.method === "POST") return await handleChat(request, env);
       return json({ error: "Not found" }, 404);
     } catch (err) {
       return json({ error: String(err.message || err) }, 500);

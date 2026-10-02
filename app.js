@@ -571,6 +571,135 @@
     $("#tot-grand").textContent = money(t.grand);
   }
 
+  /* ---- Chat Advisor hooks (JNH only; no API key here) ---- */
+  function lineLaborLocal(l) {
+    return (Number(l.qty) || 0) * (Number(l.laborRate) || 0);
+  }
+  function estimateSnapshotForAdvisor() {
+    var est = null;
+    if (window.__draftEstimate && $("#view-editor") && $("#view-editor").classList.contains("active")) {
+      try { est = collectEstimateFromForm(); } catch (e) { est = window.__draftEstimate; }
+    } else if (window.__draftEstimate) {
+      est = window.__draftEstimate;
+    } else if (state.editingEstimateId) {
+      est = state.estimates.find(function (e) { return e.id === state.editingEstimateId; }) || null;
+    }
+    if (!est) return null;
+    var totals = estimateTotals(est);
+    return {
+      id: est.id,
+      customerName: est.customerName || "",
+      customerPhone: est.customerPhone || "",
+      customerEmail: est.customerEmail || "",
+      projectAddress: est.projectAddress || "",
+      estimateDate: est.estimateDate || "",
+      estimateNumber: est.estimateNumber || "",
+      jobNotes: est.jobNotes || "",
+      paymentTerms: est.paymentTerms || "",
+      depositAmount: Number(est.depositAmount) || 0,
+      depositNotes: est.depositNotes || "",
+      laborHours: est.laborHours,
+      laborRateOverride: est.laborRateOverride,
+      effectiveLaborRate: effectiveJobLaborRate(est),
+      locked: !!est.locked,
+      sections: (est.sections || []).map(function (s) { return { title: s.title || "", body: s.body || "" }; }),
+      lines: (est.lines || []).map(function (l) {
+        return {
+          description: l.description || "",
+          qty: Number(l.qty) || 0,
+          unit: l.unit || "sf",
+          laborRate: Number(l.laborRate) || 0,
+          materialCost: Number(l.materialCost) || 0,
+          laborTotal: lineLaborLocal(l)
+        };
+      }),
+      totals: totals
+    };
+  }
+
+  function ensureDraftOpenForAdvisor() {
+    if (window.__draftEstimate && $("#estimate-form")) return window.__draftEstimate;
+    if (state.estimates && state.estimates.length) {
+      var sorted = state.estimates.slice().sort(function (a, b) {
+        return (b.updatedAt || b.estimateDate || "").localeCompare(a.updatedAt || a.estimateDate || "");
+      });
+      openEditor(sorted[0].id);
+      return window.__draftEstimate;
+    }
+    openEditor(null);
+    return window.__draftEstimate;
+  }
+
+  function applyEstimateSuggestions(sugg) {
+    if (!sugg || typeof sugg !== "object") return false;
+    var draft = ensureDraftOpenForAdvisor();
+    if (!draft) {
+      alert("Could not open an estimate to apply suggestions.");
+      return false;
+    }
+    if (draft.locked) {
+      alert("This estimate is locked. Unlock it before accepting Chat suggestions.");
+      return false;
+    }
+    var form = $("#estimate-form");
+    if (Array.isArray(sugg.lines) && sugg.lines.length) {
+      draft.lines = sugg.lines.map(function (l) {
+        return {
+          description: String(l.description || "").slice(0, 240),
+          qty: Number(l.qty) || 0,
+          unit: UNITS.indexOf(l.unit) >= 0 ? l.unit : (l.unit || "sf"),
+          laborRate: Number(l.laborRate) || 0,
+          materialCost: Number(l.materialCost) || 0
+        };
+      });
+      renderLines(draft.lines);
+    }
+    if (Array.isArray(sugg.sections) && sugg.sections.length) {
+      draft.sections = sugg.sections.map(function (sec) {
+        return { title: String(sec.title || "Section").slice(0, 120), body: String(sec.body || "").slice(0, 4000) };
+      });
+      renderScopeSections(draft.sections);
+    }
+    if (sugg.depositAmount != null && form && form.depositAmount) {
+      draft.depositAmount = Number(sugg.depositAmount) || 0;
+      form.depositAmount.value = draft.depositAmount;
+    }
+    if (sugg.depositNotes != null && form && form.depositNotes) {
+      draft.depositNotes = String(sugg.depositNotes);
+      form.depositNotes.value = draft.depositNotes;
+    }
+    if (sugg.paymentTerms != null && form && form.paymentTerms) {
+      draft.paymentTerms = String(sugg.paymentTerms);
+      form.paymentTerms.value = draft.paymentTerms;
+    }
+    if (sugg.jobNotes != null && form && form.jobNotes) {
+      draft.jobNotes = String(sugg.jobNotes);
+      form.jobNotes.value = draft.jobNotes;
+    }
+    if (sugg.laborHours != null && form && form.laborHours) {
+      draft.laborHours = sugg.laborHours === "" ? null : (Number(sugg.laborHours) || 0);
+      form.laborHours.value = draft.laborHours == null ? "" : draft.laborHours;
+    }
+    if (sugg.laborRateOverride != null && form && form.laborRateOverride) {
+      if (sugg.laborRateOverride === "" || sugg.laborRateOverride === null) draft.laborRateOverride = null;
+      else draft.laborRateOverride = Number(sugg.laborRateOverride) || 0;
+      form.laborRateOverride.value = draft.laborRateOverride == null ? "" : draft.laborRateOverride;
+    }
+    recalcTotals();
+    syncLaborPricingUI(draft);
+    draft.updatedAt = new Date().toISOString();
+    return true;
+  }
+
+  function fillMarketingBlast(subject, body) {
+    var form = $("#blast-form");
+    if (!form) return false;
+    if (form.subject) form.subject.value = subject || "";
+    if (form.body) form.body.value = body || "";
+    if (form.channel) form.channel.value = "email";
+    return true;
+  }
+
   function updateEstimateToolbar() {
     var editor = $("#view-editor");
     var active = !!(editor && editor.classList.contains("active") && window.__draftEstimate);
@@ -4085,7 +4214,27 @@
     bindAddonUI();
     applyGateUI();
     if (isDeskUnlocked()) showView("hub");
+    refreshHubChatHint();
   }
+
+  function refreshHubChatHint() {
+    var hint = $("#hub-chat-hint");
+    if (!hint) return;
+    var c = window.JNH_CHAT_CONFIG || {};
+    if (c.mode === "api" && c.apiBase) {
+      hint.innerHTML = "Live ChatGPT via Worker <code>" + escapeHtml(c.apiBase) + "</code>. OpenAI key stays on the Worker — not in this page.";
+    } else {
+      hint.innerHTML = "Demo / mock advice until Milton sets Worker secret <code>OPENAI_API_KEY</code> and points <code>chat-config.js</code> mode to <code>api</code>.";
+    }
+  }
+
+  window.JNHProDesk = {
+    isUnlocked: isDeskUnlocked,
+    showView: showView,
+    getEstimateSnapshot: estimateSnapshotForAdvisor,
+    applyEstimateSuggestions: applyEstimateSuggestions,
+    fillMarketingBlast: fillMarketingBlast
+  };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
