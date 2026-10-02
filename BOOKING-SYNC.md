@@ -2,7 +2,10 @@
 
 **Scope:** JNH Pro Desk only (`book.html`, Appointments, Rolodex, Worker). Do **not** change jnhmas.com Carrd except an optional “Book” link later.
 
-**Google account:** `jnhmasonry@gmail.com` (Jose must authorize OAuth — never commit secrets).
+**Google ops account (Calendar + Contacts sync):** `jnhmass@gmail.com`  
+Jose must authorize OAuth on **this** account — never commit secrets.
+
+**Not for ops:** `jnhmasonry@gmail.com` stays the public marketing / printed contact on estimates & site footers. Do **not** OAuth Calendar sync against it.
 
 One Worker / one OAuth refresh token covers:
 
@@ -15,7 +18,7 @@ One Worker / one OAuth refresh token covers:
 
 ### Appointments
 
-1. Sync Pro Desk appointments with Google Calendar for `jnhmasonry@gmail.com`
+1. Sync Pro Desk appointments with Google Calendar for `jnhmass@gmail.com`
 2. Public users book online (`book.html` on GitHub Pages)
 3. Busy / blocked / already-scheduled times must **not** appear as open slots
 4. New public bookings are **PENDING** until Jose approves; only then confirm on Calendar + Pro Desk
@@ -23,7 +26,7 @@ One Worker / one OAuth refresh token covers:
 
 ### Rolodex ↔ Gmail Contacts
 
-6. Pro Desk **Rolodex** stays in sync **both ways** with Gmail Contacts on `jnhmasonry@gmail.com` (same OAuth as Calendar)
+6. Pro Desk **Rolodex** stays in sync **both ways** with Gmail Contacts on `jnhmass@gmail.com` (same OAuth as Calendar)
 
 ---
 
@@ -66,7 +69,7 @@ Static GitHub Pages cannot hold Google OAuth secrets or call Calendar/People API
 └─────────────────┘                                           │
                                                               ▼
                                                    ┌──────────────────────┐
-                                                   │  jnhmasonry@gmail.com│
+                                                   │  jnhmass@gmail.com│
                                                    │  Calendar + Contacts │
                                                    └──────────────────────┘
 ```
@@ -121,7 +124,7 @@ Conflict policy (v1 scaffold): last write via Push wins on Google; Pull overwrit
 ## What Jose / Milton must authorize (no secrets in git)
 
 1. **Google Cloud project** with **Calendar API** + **People API** enabled.
-2. **OAuth consent** for `jnhmasonry@gmail.com` with scopes:
+2. **OAuth consent** for `jnhmass@gmail.com` with scopes:
    - `https://www.googleapis.com/auth/calendar`
    - `https://www.googleapis.com/auth/calendar.events`
    - `https://www.googleapis.com/auth/contacts`
@@ -160,16 +163,17 @@ apps-script/             ← optional Google Apps Script twin
 | `book.html` pending copy + API hooks | Scaffold; **localStorage fallback** until Worker + OAuth |
 | Rolodex Pull / Push / Sync UI | Scaffold; needs Worker + People scopes |
 | Real freeBusy / Calendar / Contacts | **Needs Jose OAuth** + Worker deploy |
-| Carrd / jnhmas.com | **Untouched** |
+| Carrd / jnhmas.com | **Untouched** — steps in BOOK-CARRD-STEPS.md |
 
 ---
 
 ## Next steps for Milton
 
 1. Create Google Cloud OAuth client; enable Calendar + People APIs.
-2. Jose signs in as `jnhmasonry@gmail.com`; save refresh token **with contacts scope** as Worker secret.
+2. Jose signs in as `jnhmass@gmail.com`; save refresh token **with contacts scope** as Worker secret.
 3. `cd worker && npm i && npx wrangler secret put …` then `npx wrangler deploy`.
 4. Set `booking-config.js` → `mode: "api"`, `apiBase: <Worker URL>`; commit; push Pages.
 5. Jose bookmarks `confirm.html?token=…` on phone for daily pending confirms.
 6. In Pro Desk → Rolodex: **Sync both ways** once (ADMIN_TOKEN) to seed links; then use Pull/Push as needed.
-7. Optional later: Carrd “Book” → `https://miltonchoto-boop.github.io/jnh-pro-desk/book.html`.
+7. Carrd “Book / Appointment” link only (no wallpaper change) — exact steps in **[BOOK-CARRD-STEPS.md](./BOOK-CARRD-STEPS.md)** → `https://miltonchoto-boop.github.io/jnh-pro-desk/book.html`.
+8. OAuth human checklist: **[BOOKING-OAUTH-STEPS.md](./BOOKING-OAUTH-STEPS.md)** (sign in as `jnhmass@gmail.com`).

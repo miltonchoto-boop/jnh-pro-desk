@@ -1,13 +1,13 @@
 /**
  * JNH Masonry booking — Google Apps Script twin of the Cloudflare Worker.
  * Deploy: Deploy → New deployment → Web app
- *   Execute as: Me (jnhmasonry@gmail.com)
+ *   Execute as: Me (jnhmass@gmail.com)
  *   Who has access: Anyone
  *
  * Script Properties (Project Settings → Script properties):
  *   ADMIN_TOKEN = <long random string>
  *
- * Uses the script owner's CalendarApp (must be jnhmasonry@gmail.com).
+ * Uses the script owner's CalendarApp (must be jnhmass@gmail.com).
  * No OAuth client secrets needed when run as the calendar owner.
  */
 

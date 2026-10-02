@@ -2,7 +2,7 @@
 
 Use this if Milton prefers **no Cloudflare** — Jose’s Google account hosts the API.
 
-1. Create a new Apps Script project while signed in as `jnhmasonry@gmail.com`.
+1. Create a new Apps Script project while signed in as `jnhmass@gmail.com`.
 2. Paste `Code.gs`.
 3. Project Settings → Script properties → `ADMIN_TOKEN` = random secret.
 4. Deploy → Web app → Execute as **Me** → Who has access **Anyone**.

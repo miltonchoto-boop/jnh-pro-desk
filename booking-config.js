@@ -6,7 +6,7 @@
        "api"   = use Cloudflare Worker / Apps Script at apiBase */
     mode: "local",
     apiBase: "", // e.g. "https://jnh-booking.YOUR_SUBDOMAIN.workers.dev"
-    calendarEmail: "jnhmasonry@gmail.com",
+    calendarEmail: "jnhmass@gmail.com",
     timezone: "America/New_York",
     /* Admin token is NEVER stored here for production.
        confirm.html accepts ?token=… in the URL (Jose’s phone bookmark).

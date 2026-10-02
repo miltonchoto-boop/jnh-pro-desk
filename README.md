@@ -100,16 +100,18 @@ Modeled after `jose-estimate-sample.docx` — numbered scope sections, customer 
 
 - **`book.html`** — customer-facing scheduler. Copy: **Request appointment — Jose will confirm** (status `pending` until Confirm).
 - Live: https://miltonchoto-boop.github.io/jnh-pro-desk/book.html
-- Embed: `?embed=1`; Carrd can link “Book” here later (Carrd not edited in this pass).
+- Embed: `?embed=1`
 - **`confirm.html`** — mobile pending queue for Jose.
-- Until Google OAuth + Worker are live: localStorage fallback + mailto. See **BOOKING-SYNC.md**.
+- Until Google OAuth + Worker are live: localStorage fallback + mailto (`jnhmass@gmail.com`).
+- Carrd link steps (no wallpaper change): **[BOOK-CARRD-STEPS.md](./BOOK-CARRD-STEPS.md)**
 
 ## Google Calendar + Contacts sync (scaffold)
 
-See **[BOOKING-SYNC.md](./BOOKING-SYNC.md)**. Same OAuth for `jnhmasonry@gmail.com`:
+See **[BOOKING-SYNC.md](./BOOKING-SYNC.md)**. Same OAuth for `jnhmass@gmail.com` (ops sync — not the public marketing inbox):
 
 - Calendar freeBusy + pending hold events (Cloudflare Worker under `worker/`)
 - Rolodex ↔ Gmail Contacts two-way sync (People API; Pull / Push / Sync in Rolodex tab)
+- Human OAuth checklist: **[BOOKING-OAUTH-STEPS.md](./BOOKING-OAUTH-STEPS.md)**
 
 Secrets stay in Worker env — never in this repo. Set `booking-config.js` `mode` to `"api"` after deploy.
 
@@ -117,4 +119,4 @@ Secrets stay in Worker env — never in this repo. Set `booking-config.js` `mode
 
 - Live: https://miltonchoto-boop.github.io/jnh-pro-desk/
 - Wire OCR API into `runOcrStub`
-- Optional Carrd “Book” link only
+- Carrd “Book” button per BOOK-CARRD-STEPS.md

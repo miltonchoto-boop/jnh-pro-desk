@@ -4,13 +4,13 @@ Cloudflare Worker for:
 - Google Calendar freeBusy + pending estimate holds
 - Bidirectional **Rolodex ↔ Gmail Contacts** (People API)
 
-Same OAuth identity: `jnhmasonry@gmail.com`.
+Same OAuth identity: `jnhmass@gmail.com`.
 
 ## Secrets (Jose / Milton — do this once)
 
 1. Google Cloud project: enable **Calendar API** + **People API**.
 2. Create OAuth client (Desktop or Web); get client id + secret.
-3. Obtain a **refresh token** signed in as `jnhmasonry@gmail.com` with scopes:
+3. Obtain a **refresh token** signed in as `jnhmass@gmail.com` with scopes:
    - `https://www.googleapis.com/auth/calendar`
    - `https://www.googleapis.com/auth/calendar.events`
    - `https://www.googleapis.com/auth/contacts`
