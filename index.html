@@ -36,27 +36,45 @@
         <nav class="tabs" role="tablist">
           <button class="tab active" data-view="hub" type="button">Hub</button>
           <button class="tab" data-view="weather" type="button">Weather</button>
-          <button class="tab" data-view="rolodex" type="button">Rolodex</button>
           <button class="tab" data-view="appointments" type="button">Appointments</button>
-          <button class="tab" data-view="estimates" type="button">Estimates</button>
-          <button class="tab" data-view="jobs" type="button">Jobs</button>
-          <button class="tab" data-view="pricebook" type="button">Price Book</button>
-          <button class="tab" data-view="insurance" type="button">Insurance</button>
-          <button class="tab" data-view="fleet" type="button">Fleet</button>
-          <button class="tab" data-view="marketing" type="button">Marketing</button>
           <button class="tab" data-view="flow" type="button">Client Flow</button>
-          <button class="tab" data-view="reviews" type="button">Reviews</button>
           <button class="tab" data-view="payments" type="button">Payments</button>
+
+          <div class="nav-menu" id="work-nav">
+            <button class="tab nav-menu-toggle" data-view="work" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="work-nav-panel">
+              Work <span class="nav-menu-chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="nav-menu-panel" id="work-nav-panel" role="menu" aria-label="Work tools">
+              <button class="tab nav-menu-item" data-view="estimates" type="button" role="menuitem">Estimates</button>
+              <button class="tab nav-menu-item" data-view="pricebook" type="button" role="menuitem">Price Book</button>
+              <button class="tab nav-menu-item" data-view="jobs" type="button" role="menuitem">Jobs</button>
+              <button class="tab nav-menu-item" data-view="insurance" type="button" role="menuitem">Insurance</button>
+              <button class="tab nav-menu-item" data-view="fleet" type="button" role="menuitem">Fleet</button>
+            </div>
+          </div>
+
+          <div class="nav-menu" id="growth-contacts-nav">
+            <button class="tab nav-menu-toggle" data-view="growth-contacts" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="growth-contacts-nav-panel">
+              Growth &amp; Contacts <span class="nav-menu-chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="nav-menu-panel" id="growth-contacts-nav-panel" role="menu" aria-label="Growth and contact tools">
+              <button class="tab nav-menu-item" data-view="marketing" type="button" role="menuitem">Marketing</button>
+              <button class="tab nav-menu-item" data-view="reviews" type="button" role="menuitem">Reviews</button>
+              <button class="tab nav-menu-item" data-view="rolodex" type="button" role="menuitem">Rolodex</button>
+              <button class="tab nav-menu-item" data-view="vendors" type="button" role="menuitem">Vendors</button>
+            </div>
+          </div>
+
           <div class="nav-menu" id="employees-nav">
-            <button class="tab nav-menu-toggle" data-view="employees" type="button" aria-haspopup="true" aria-expanded="false">
+            <button class="tab nav-menu-toggle" data-view="employees" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="employees-nav-panel">
               Employees <span class="nav-menu-chevron" aria-hidden="true">▾</span>
             </button>
-            <div class="nav-menu-panel" role="menu" aria-label="Employee tools">
+            <div class="nav-menu-panel" id="employees-nav-panel" role="menu" aria-label="Employee tools">
               <button class="tab nav-menu-item" data-view="timelog" type="button" role="menuitem">Time Log</button>
               <button class="tab nav-menu-item" data-view="payroll" type="button" role="menuitem">Weekly Payroll</button>
             </div>
           </div>
-          <button class="tab" data-view="vendors" type="button">Vendors</button>
+
           <button class="tab" data-view="receipts" type="button">Receipts</button>
           <button class="tab" data-view="settings" type="button">Settings</button>
         </nav>

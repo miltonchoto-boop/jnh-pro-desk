@@ -173,22 +173,37 @@
   }
 
   // ---------- navigation ----------
-  function setEmployeesMenuOpen(open) {
-    var menu = document.getElementById("employees-nav");
+  var NAV_GROUPS = {
+    "work-nav": ["estimates", "pricebook", "jobs", "insurance", "fleet"],
+    "growth-contacts-nav": ["marketing", "reviews", "rolodex", "vendors"],
+    "employees-nav": ["employees", "timelog", "payroll"]
+  };
+
+  function setNavMenuOpen(menuId, open) {
+    var menu = document.getElementById(menuId);
     var toggle = menu && menu.querySelector(".nav-menu-toggle");
     if (!menu) return;
     menu.classList.toggle("open", open);
     if (toggle) toggle.setAttribute("aria-expanded", open ? "true" : "false");
   }
 
+  function closeNavMenus(exceptId) {
+    Object.keys(NAV_GROUPS).forEach(function (menuId) {
+      if (menuId !== exceptId) setNavMenuOpen(menuId, false);
+    });
+  }
+
   function showView(name) {
-    var employeeViews = ["employees", "timelog", "payroll"];
     $$(".view").forEach(function (v) { v.classList.remove("active"); });
     $$(".tab").forEach(function (t) {
-      var isEmployeeMenu = t.classList.contains("nav-menu-toggle") && employeeViews.indexOf(name) !== -1;
-      t.classList.toggle("active", t.getAttribute("data-view") === name || isEmployeeMenu);
+      var menu = t.closest(".nav-menu");
+      var groupViews = menu ? NAV_GROUPS[menu.id] || [] : [];
+      var isGroupMenu = t.classList.contains("nav-menu-toggle") && groupViews.indexOf(name) !== -1;
+      t.classList.toggle("active", t.getAttribute("data-view") === name || isGroupMenu);
     });
-    if (employeeViews.indexOf(name) === -1) setEmployeesMenuOpen(false);
+    Object.keys(NAV_GROUPS).forEach(function (menuId) {
+      if (NAV_GROUPS[menuId].indexOf(name) === -1) setNavMenuOpen(menuId, false);
+    });
     var map = {
       hub: "view-hub",
       weather: "view-weather",
@@ -3762,20 +3777,22 @@
 
     $$(".tab").forEach(function (tab) {
       tab.addEventListener("click", function () {
-        showView(tab.getAttribute("data-view"));
-        if (tab.classList.contains("nav-menu-toggle")) {
-          var menu = $("#employees-nav");
-          setEmployeesMenuOpen(!menu.classList.contains("open"));
-        } else if (tab.classList.contains("nav-menu-item")) {
-          setEmployeesMenuOpen(false);
+        var menu = tab.closest(".nav-menu");
+        if (tab.classList.contains("nav-menu-toggle") && menu) {
+          var isOpen = menu.classList.contains("open");
+          closeNavMenus(menu.id);
+          setNavMenuOpen(menu.id, !isOpen);
+          return;
         }
+        showView(tab.getAttribute("data-view"));
+        if (tab.classList.contains("nav-menu-item")) closeNavMenus();
       });
     });
     document.addEventListener("click", function (event) {
-      if (!event.target.closest("#employees-nav")) setEmployeesMenuOpen(false);
+      if (!event.target.closest(".nav-menu")) closeNavMenus();
     });
     document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape") setEmployeesMenuOpen(false);
+      if (event.key === "Escape") closeNavMenus();
     });
 
     var backPro = $("#btn-back-pro-desk");
