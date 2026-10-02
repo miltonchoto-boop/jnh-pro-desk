@@ -8,7 +8,7 @@
 
   var DEFAULT_AVAIL = {
     slotMinutes: 60,
-    workDays: [1, 2, 3, 4, 5], // Mon–Fri
+    workDays: [1, 2, 3, 4, 5, 6], // Mon–Sat
     startHour: 9,
     endHour: 17,
     lunchStart: 12,
