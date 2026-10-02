@@ -1799,6 +1799,7 @@
   // ========== EXTRA MODULES: jobs, price book, reviews, payments ==========
   var JOB_STATUSES = ["Sold", "Scheduled", "In progress", "Done"];
   var DEFAULT_GOOGLE_REVIEW_URL = "https://search.google.com/local/writereview?placeid=ChIJC1ceBG4y6IkRObpjjofxrpQ";
+  var DEFAULT_REVIEW_MESSAGE = "Hey, how are you doing? It was great working on your project. If you could kindly leave me a Google review, it would help me out tremendously. Again, thank you for your support.";
   var STRIPE_FEE_NOTE = "Card payments typically incur ~2.9% + $0.30 per transaction (Stripe US). Customer or JNH absorbs fees per agreement.";
 
   function defaultSettings() {
@@ -2043,6 +2044,8 @@
     var url = effectiveReviewUrl();
     var input = $("#google-review-url");
     if (input && document.activeElement !== input) input.value = (state.settings && state.settings.googleReviewUrl) || DEFAULT_GOOGLE_REVIEW_URL;
+    var message = $("#review-message");
+    if (message && document.activeElement !== message) message.value = (state.settings && state.settings.reviewMessage) || DEFAULT_REVIEW_MESSAGE;
     var img = $("#reviews-qr-img");
     if (img) img.src = qrImageUrl(url);
     var disp = $("#reviews-link-display");
@@ -2051,10 +2054,33 @@
     if (open) open.href = url;
   }
 
+  function reviewShareBody(includeQr) {
+    var url = effectiveReviewUrl();
+    var message = $("#review-message");
+    var body = (message && message.value.trim()) || (state.settings && state.settings.reviewMessage) || DEFAULT_REVIEW_MESSAGE;
+    body += "\n\nGoogle review link: " + url;
+    if (includeQr) {
+      body += "\nQR code image: " + qrImageUrl(url);
+      body += "\n(If your app does not show the image, the QR is on screen — attach it from print.)";
+    }
+    return body;
+  }
+
+  function openReviewEmail(includeQr) {
+    var subject = "A quick favor — Google review for JNH Masonry";
+    window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(reviewShareBody(includeQr));
+  }
+
+  function openReviewText(includeQr) {
+    window.location.href = "sms:?body=" + encodeURIComponent(reviewShareBody(includeQr));
+  }
+
   function saveReviewsSettings(e) {
     e.preventDefault();
     if (!state.settings) state.settings = defaultSettings();
     state.settings.googleReviewUrl = $("#google-review-url").value.trim() || DEFAULT_GOOGLE_REVIEW_URL;
+    var message = $("#review-message");
+    state.settings.reviewMessage = (message && message.value.trim()) || DEFAULT_REVIEW_MESSAGE;
     save();
     renderReviews();
     alert("Review link saved. Printed estimates will use this QR/link.");
@@ -3846,6 +3872,10 @@
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(function () { alert("Copied review link"); });
       else prompt("Copy review link:", u);
     });
+    if ($("#btn-review-text-link")) $("#btn-review-text-link").addEventListener("click", function () { openReviewText(false); });
+    if ($("#btn-review-email-link")) $("#btn-review-email-link").addEventListener("click", function () { openReviewEmail(false); });
+    if ($("#btn-review-text-qr")) $("#btn-review-text-qr").addEventListener("click", function () { openReviewText(true); });
+    if ($("#btn-review-email-qr")) $("#btn-review-email-qr").addEventListener("click", function () { openReviewEmail(true); });
 
     if ($("#stripe-settings-form")) $("#stripe-settings-form").addEventListener("submit", saveStripeSettings);
     if ($("#btn-payments-refresh")) $("#btn-payments-refresh").addEventListener("click", renderPayments);
