@@ -47,9 +47,15 @@
           <button class="tab" data-view="flow" type="button">Client Flow</button>
           <button class="tab" data-view="reviews" type="button">Reviews</button>
           <button class="tab" data-view="payments" type="button">Payments</button>
-          <button class="tab" data-view="employees" type="button">Employees</button>
-          <button class="tab" data-view="timelog" type="button">Time Log</button>
-          <button class="tab" data-view="payroll" type="button">Weekly Payroll</button>
+          <div class="nav-menu" id="employees-nav">
+            <button class="tab nav-menu-toggle" data-view="employees" type="button" aria-haspopup="true" aria-expanded="false">
+              Employees <span class="nav-menu-chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="nav-menu-panel" role="menu" aria-label="Employee tools">
+              <button class="tab nav-menu-item" data-view="timelog" type="button" role="menuitem">Time Log</button>
+              <button class="tab nav-menu-item" data-view="payroll" type="button" role="menuitem">Weekly Payroll</button>
+            </div>
+          </div>
           <button class="tab" data-view="vendors" type="button">Vendors</button>
           <button class="tab" data-view="receipts" type="button">Receipts</button>
           <button class="tab" data-view="settings" type="button">Settings</button>

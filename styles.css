@@ -69,6 +69,21 @@ a { color: var(--gold); }
   color: #0b1524; background: linear-gradient(180deg, #b8d0f0, var(--gold-soft));
   border-color: var(--gold); font-weight: 700;
 }
+.nav-menu { position: relative; }
+.nav-menu-toggle { display: inline-flex; align-items: center; gap: .28rem; }
+.nav-menu-chevron { font-size: .7em; transition: transform .15s ease; }
+.nav-menu.open .nav-menu-chevron { transform: rotate(180deg); }
+.nav-menu-panel {
+  display: none; position: absolute; top: calc(100% + .45rem); right: 0; z-index: 30;
+  min-width: 150px; padding: .3rem; border: 1px solid var(--border); border-radius: 9px;
+  background: var(--bg-elev); box-shadow: var(--shadow);
+}
+.nav-menu.open .nav-menu-panel { display: grid; gap: .12rem; }
+.nav-menu-panel .tab {
+  display: block; width: 100%; padding: .45rem .6rem; border-radius: 6px; text-align: left;
+  white-space: nowrap;
+}
+.nav-menu-panel .tab:hover, .nav-menu-panel .tab.active { border-color: var(--border); }
 
 @media (max-width: 720px) {
   .topbar { flex-wrap: wrap; align-items: flex-start; gap: .45rem; }

@@ -173,11 +173,22 @@
   }
 
   // ---------- navigation ----------
+  function setEmployeesMenuOpen(open) {
+    var menu = document.getElementById("employees-nav");
+    var toggle = menu && menu.querySelector(".nav-menu-toggle");
+    if (!menu) return;
+    menu.classList.toggle("open", open);
+    if (toggle) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
   function showView(name) {
+    var employeeViews = ["employees", "timelog", "payroll"];
     $$(".view").forEach(function (v) { v.classList.remove("active"); });
     $$(".tab").forEach(function (t) {
-      t.classList.toggle("active", t.getAttribute("data-view") === name);
+      var isEmployeeMenu = t.classList.contains("nav-menu-toggle") && employeeViews.indexOf(name) !== -1;
+      t.classList.toggle("active", t.getAttribute("data-view") === name || isEmployeeMenu);
     });
+    if (employeeViews.indexOf(name) === -1) setEmployeesMenuOpen(false);
     var map = {
       hub: "view-hub",
       weather: "view-weather",
@@ -3752,7 +3763,19 @@
     $$(".tab").forEach(function (tab) {
       tab.addEventListener("click", function () {
         showView(tab.getAttribute("data-view"));
+        if (tab.classList.contains("nav-menu-toggle")) {
+          var menu = $("#employees-nav");
+          setEmployeesMenuOpen(!menu.classList.contains("open"));
+        } else if (tab.classList.contains("nav-menu-item")) {
+          setEmployeesMenuOpen(false);
+        }
       });
+    });
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest("#employees-nav")) setEmployeesMenuOpen(false);
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") setEmployeesMenuOpen(false);
     });
 
     var backPro = $("#btn-back-pro-desk");
