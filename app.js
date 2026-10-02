@@ -227,6 +227,7 @@
     if (name === "marketing") renderMarketing();
     if (name === "flow") renderFlow();
     if (name === "editor") renderEstimateInsuranceAttach();
+    updateEstimateToolbar();
   }
 
   // ---------- estimates ----------
@@ -354,6 +355,8 @@
     form.paymentTerms.value = est.paymentTerms || "";
     form.includeDisclosures.checked = est.includeDisclosures !== false;
     if (!Array.isArray(est.insuranceDocIds)) est.insuranceDocIds = [];
+    if (typeof est.locked !== "boolean") est.locked = false;
+    if (window.__draftEstimate && typeof window.__draftEstimate.locked !== "boolean") window.__draftEstimate.locked = est.locked;
     if (window.__draftEstimate && !Array.isArray(window.__draftEstimate.insuranceDocIds)) window.__draftEstimate.insuranceDocIds = est.insuranceDocIds.slice();
     if (form.jobStatus) form.jobStatus.value = est.jobStatus || "";
     if (form.jobScheduledDate) form.jobScheduledDate.value = est.jobScheduledDate || "";
@@ -365,6 +368,7 @@
     renderLines(est.lines || []);
     recalcTotals();
     showView("editor");
+    applyEstimateLockState();
     renderEstimateInsuranceAttach();
   }
 
@@ -445,6 +449,120 @@
     $("#tot-labor").textContent = money(t.labor);
     $("#tot-materials").textContent = money(t.materials);
     $("#tot-grand").textContent = money(t.grand);
+  }
+
+  function updateEstimateToolbar() {
+    var editor = $("#view-editor");
+    var active = !!(editor && editor.classList.contains("active") && window.__draftEstimate);
+    ["delete", "lock", "print", "email", "text"].forEach(function (action) {
+      var button = $("#btn-estimates-" + action);
+      if (button) button.disabled = !active;
+    });
+    var lock = $("#btn-estimates-lock");
+    if (lock) lock.textContent = active && window.__draftEstimate.locked ? "Unlock Estimate" : "Lock Estimate";
+  }
+
+  function applyEstimateLockState() {
+    var draft = window.__draftEstimate;
+    var form = $("#estimate-form");
+    var locked = !!(draft && draft.locked);
+    if (form) {
+      $$("input, select, textarea", form).forEach(function (control) { control.disabled = locked; });
+      $$("button", form).forEach(function (button) { button.disabled = locked; });
+    }
+    var saveButton = $("#btn-save-estimate");
+    if (saveButton) saveButton.disabled = locked;
+    updateEstimateToolbar();
+  }
+
+  function currentEstimateForToolbar() {
+    if (!window.__draftEstimate) {
+      alert("Open an estimate first.");
+      return null;
+    }
+    return collectEstimateFromForm();
+  }
+
+  function estimateShareSummary(est) {
+    var totals = estimateTotals(est);
+    return [
+      "JNH Masonry Inc. estimate " + (est.estimateNumber || ""),
+      "Customer: " + (est.customerName || ""),
+      "Project: " + (est.projectAddress || ""),
+      "Total: " + money(totals.grand),
+      "Date: " + (est.estimateDate || ""),
+      "\nEstimate summary — please reply to discuss details."
+    ].join("\n");
+  }
+
+  function deleteCurrentEstimate() {
+    var draft = window.__draftEstimate;
+    if (!draft) return;
+    if (!confirm("Delete this estimate for " + (draft.customerName || "this customer") + "?")) return;
+    state.estimates = state.estimates.filter(function (est) { return est.id !== draft.id; });
+    removeFlowForEstimate(draft.id);
+    save();
+    window.__draftEstimate = null;
+    state.editingEstimateId = null;
+    showView("estimates");
+  }
+
+  function toggleCurrentEstimateLock() {
+    var draft = window.__draftEstimate;
+    if (!draft) return;
+    draft.locked = !draft.locked;
+    var idx = state.estimates.findIndex(function (est) { return est.id === draft.id; });
+    if (idx >= 0) {
+      state.estimates[idx].locked = draft.locked;
+      save();
+    }
+    applyEstimateLockState();
+  }
+
+  function createProductFromToolbar() {
+    if (window.__draftEstimate && window.__draftEstimate.locked) {
+      alert("Unlock the estimate before adding a product.");
+      return;
+    }
+    ensurePriceBook();
+    var name = prompt("Product name / SKU:");
+    if (!name || !name.trim()) return;
+    var cost = prompt("Last cost per unit (optional):", "0");
+    if (cost === null) return;
+    var item = {
+      id: uid(),
+      name: name.trim(),
+      category: "Other",
+      unit: "ea",
+      lastCost: parseFloat(cost) || 0,
+      vendor: "",
+      lastPurchased: "",
+      notes: "",
+      updatedAt: new Date().toISOString()
+    };
+    state.priceBook.push(item);
+    save();
+    if (window.__draftEstimate) addLineFromPriceItem(item);
+    else alert("Product added to Price Book.");
+  }
+
+  function printCurrentEstimate() {
+    var est = currentEstimateForToolbar();
+    if (est) printEstimate(est);
+  }
+
+  function emailCurrentEstimate() {
+    var est = currentEstimateForToolbar();
+    if (!est) return;
+    var subject = "JNH Masonry estimate " + (est.estimateNumber || "");
+    window.location.href = "mailto:" + encodeURIComponent(est.customerEmail || "") + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(estimateShareSummary(est));
+  }
+
+  function textCurrentEstimate() {
+    var est = currentEstimateForToolbar();
+    if (!est) return;
+    var phone = (est.customerPhone || "").replace(/[^+\d]/g, "");
+    window.location.href = "sms:" + encodeURIComponent(phone) + "?body=" + encodeURIComponent(estimateShareSummary(est));
   }
 
   function collectEstimateFromForm() {
@@ -3617,6 +3735,14 @@
         showView("hub");
       });
     }
+
+    $("#btn-estimates-new-product").addEventListener("click", createProductFromToolbar);
+    $("#btn-estimates-new").addEventListener("click", function () { openEditor(null); });
+    $("#btn-estimates-delete").addEventListener("click", deleteCurrentEstimate);
+    $("#btn-estimates-lock").addEventListener("click", toggleCurrentEstimateLock);
+    $("#btn-estimates-print").addEventListener("click", printCurrentEstimate);
+    $("#btn-estimates-email").addEventListener("click", emailCurrentEstimate);
+    $("#btn-estimates-text").addEventListener("click", textCurrentEstimate);
 
     $("#btn-new-estimate").addEventListener("click", function () { openEditor(null); });
     $("#btn-back-estimates").addEventListener("click", function () { showView("estimates"); });
