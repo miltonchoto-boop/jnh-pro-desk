@@ -93,7 +93,7 @@ Modeled after `jose-estimate-sample.docx` — numbered scope sections, customer 
 ## Stack
 
 - `index.html` — shell + views
-- `styles.css` — silver + blue theme
+- `styles.css` — executive light theme (off-white, charcoal, navy, bronze)
 - `app.js` — all logic (no framework)
 
 ## Public estimate booker

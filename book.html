@@ -5,52 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Book Estimate Appointment · JNH Masonry</title>
   <meta name="description" content="Schedule a free on-site estimate with JNH Masonry Inc. — Bay Shore & Suffolk County." />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20261002-exec" />
   <style>
     .book-shell { max-width: 720px; margin: 0 auto; padding: 1.25rem 1.1rem 3rem; }
     .book-hero {
       text-align: center; padding: 1.5rem 1rem 1.25rem;
       border: 1px solid var(--border-gold); border-radius: var(--radius);
-      background: linear-gradient(160deg, rgba(93,156,240,.12), transparent 55%), var(--bg-card);
+      background: linear-gradient(160deg, rgba(138,106,59,.10), transparent 55%), var(--bg-card);
       box-shadow: var(--shadow); margin-bottom: 1.25rem;
     }
     .book-hero img {
       width: clamp(88px, 22vw, 132px); height: auto; aspect-ratio: 1; object-fit: contain;
-      border-radius: 16px; filter: drop-shadow(0 6px 22px rgba(93,156,240,.35));
+      border-radius: 16px; background: #fffcf7; filter: drop-shadow(0 4px 12px rgba(28,25,21,.12));
     }
-    .book-hero h1 { margin: .75rem 0 .35rem; color: var(--gold); font-size: clamp(1.35rem, 4vw, 1.85rem); }
-    .book-hero p { margin: 0; color: var(--text-muted); }
+    .book-hero h1 { margin: .75rem 0 .35rem; color: var(--navy); font-size: clamp(1.5rem, 4vw, 2rem); }
+    .book-hero p { margin: 0; color: var(--text-muted); font-size: 1.05rem; line-height: 1.5; }
     .book-steps { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin: 1rem 0 0; }
     .book-steps span {
-      font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted);
+      font-size: .82rem; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); font-weight: 700;
       padding: .3rem .65rem; border-radius: 999px; border: 1px solid var(--border);
     }
-    .book-steps span.on { color: #0b1524; background: linear-gradient(180deg, #b8d0f0, var(--gold-soft)); border-color: var(--gold); font-weight: 700; }
+    .book-steps span.on { color: #f6f4ef; background: var(--navy); border-color: var(--navy); font-weight: 700; }
     .cal-grid {
       display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; margin-top: .75rem;
     }
-    .cal-grid .dow { text-align: center; font-size: .68rem; color: var(--gold-dim); text-transform: uppercase; letter-spacing: .04em; padding: .25rem; }
+    .cal-grid .dow { text-align: center; font-size: .78rem; color: var(--navy); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: .25rem; }
     .cal-day {
       aspect-ratio: 1; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-input);
-      color: var(--text-muted); cursor: default; font-size: .85rem; display: grid; place-items: center;
+      color: var(--text-muted); cursor: default; font-size: 1rem; display: grid; place-items: center;
     }
     .cal-day.open { color: var(--text); cursor: pointer; border-color: var(--border-gold); }
-    .cal-day.open:hover { background: rgba(93,156,240,.12); color: var(--gold); }
-    .cal-day.selected { background: linear-gradient(180deg, #b8d0f0, var(--gold-soft)); color: #0b1524; font-weight: 800; border-color: var(--gold); }
+    .cal-day.open:hover { background: rgba(27,42,61,.08); color: var(--navy); }
+    .cal-day.selected { background: var(--navy); color: #f6f4ef; font-weight: 800; border-color: var(--navy); }
     .cal-day.muted { opacity: .35; }
     .slot-grid { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .65rem; }
     .slot-btn {
       border: 1px solid var(--border); background: var(--bg-elev); color: var(--text);
-      padding: .45rem .75rem; border-radius: 8px; cursor: pointer; font-size: .9rem;
+      padding: .55rem .85rem; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600;
     }
-    .slot-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+    .slot-btn:hover { border-color: var(--navy); color: var(--navy); }
     .slot-btn.selected {
-      background: linear-gradient(180deg, #b8d0f0, var(--gold-soft)); color: #0b1524;
-      border-color: var(--gold); font-weight: 700;
+      background: var(--navy); color: #f6f4ef;
+      border-color: var(--navy); font-weight: 700;
     }
     .book-success {
       text-align: center; padding: 1.5rem; border: 1px solid var(--border-gold); border-radius: var(--radius);
-      background: linear-gradient(145deg, rgba(93,207,138,.08), transparent), var(--bg-card);
+      background: linear-gradient(145deg, rgba(26,107,56,.08), transparent), var(--bg-card);
     }
     .book-success h2 { color: var(--ok); margin: 0 0 .5rem; }
     .book-foot { text-align: center; margin-top: 1.5rem; font-size: .82rem; color: var(--text-muted); }
