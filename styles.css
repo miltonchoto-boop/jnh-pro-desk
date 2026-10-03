@@ -60,7 +60,7 @@ code { background: #f0f3f8; color: var(--text); padding: .08em .35em; border-rad
 }
 .brand { display: flex; gap: .55rem; align-items: center; flex-shrink: 0; max-width: min(440px, 46%); }
 .brand-logo {
-  width: clamp(44px, 6vw, 56px);
+  width: clamp(132px, 18vw, 168px);
   height: auto;
   aspect-ratio: 1;
   object-fit: contain;
@@ -81,7 +81,7 @@ code { background: #f0f3f8; color: var(--text); padding: .08em .35em; border-rad
 .brand-text strong {
   font-family: var(--font);
   font-size: 14px; font-weight: 700;
-  color: #fff; white-space: nowrap; letter-spacing: 0;
+  color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0;
 }
 .brand-text span { font-size: 12px; color: #f5e6a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -124,7 +124,7 @@ code { background: #f0f3f8; color: var(--text); padding: .08em .35em; border-rad
 @media (max-width: 720px) {
   .topbar { flex-wrap: wrap; align-items: flex-start; gap: .45rem; }
   .brand { max-width: 100%; }
-  .brand-logo { width: 48px; }
+  .brand-logo { width: 144px; }
   .topbar-right { width: 100%; justify-content: flex-start; }
   .tabs { justify-content: flex-start; }
 }
