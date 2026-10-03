@@ -176,9 +176,10 @@
 
   // ---------- navigation ----------
   var NAV_GROUPS = {
-    "work-nav": ["estimates", "pricebook", "jobs", "insurance", "fleet"],
-    "growth-contacts-nav": ["marketing", "reviews", "rolodex", "vendors"],
-    "employees-nav": ["employees", "timelog", "payroll"]
+    "work-nav": ["estimates", "jobs", "pricebook"],
+    "people-nav": ["rolodex", "employees", "timelog", "payroll"],
+    "operations-nav": ["appointments", "vendors", "insurance", "fleet"],
+    "growth-nav": ["marketing", "reviews"]
   };
 
   function setNavMenuOpen(menuId, open) {
@@ -3636,8 +3637,8 @@
       { label: "Open estimates", value: String(openEst), sub: (state.estimates || []).length + " total", goto: "estimates" },
       { label: "Active jobs", value: String(activeJobs), sub: "Sold → In progress", goto: "jobs" },
       { label: "Pipeline", value: String(flowInPipeline), sub: flowOpenIssues ? (flowOpenIssues + " open issue(s)") : "Client Flow", goto: "flow" },
-      { label: "Upcoming appts", value: String(upcomingAppt), sub: "Estimate visits", goto: "appointments" },
       { label: "Payroll owed", value: money(pay.total), sub: "This week", goto: "payroll" },
+      { label: "Upcoming appts", value: String(upcomingAppt), sub: "Calendar", goto: "appointments" },
       { label: "Vendors", value: String(vendorCount), sub: "Suppliers", goto: "vendors" },
       { label: "Receipts / wk", value: money(receiptSum), sub: receiptWeek.length + " this week", goto: "receipts" }
     ];

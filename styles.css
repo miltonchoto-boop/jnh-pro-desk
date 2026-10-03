@@ -89,15 +89,21 @@ code { background: #efeae2; color: var(--text); padding: .08em .35em; border-rad
 .nav-menu-chevron { font-size: .7em; transition: transform .15s ease; }
 .nav-menu.open .nav-menu-chevron { transform: rotate(180deg); }
 .nav-menu-panel {
-  display: none; position: absolute; top: calc(100% + .45rem); right: 0; z-index: 30;
-  min-width: 180px; padding: .35rem; border: 1px solid #d9d1c5; border-radius: 9px;
+  display: none; position: absolute; top: calc(100% + .4rem); left: 0; z-index: 30;
+  min-width: 12.5rem; padding: .45rem; border: 1px solid #d9d1c5; border-radius: 10px;
   background: #ffffff; box-shadow: 0 12px 28px rgba(28, 25, 21, .16);
 }
-.nav-menu.open .nav-menu-panel { display: grid; gap: .12rem; }
+.nav-menu.open .nav-menu-panel { display: grid; gap: .2rem; }
 .nav-menu-panel .tab {
-  display: block; width: 100%; padding: .55rem .75rem; border-radius: 6px; text-align: left;
-  white-space: nowrap; color: var(--text); background: transparent; font-size: .98rem; font-weight: 600;
+  display: block; width: 100%; padding: .62rem .9rem; border-radius: 8px; text-align: left;
+  white-space: nowrap; color: var(--text); background: transparent; font-size: 1rem; font-weight: 600;
 }
+.nav-menu-panel .tab.nav-nested {
+  margin-left: .65rem; width: calc(100% - .65rem); padding-left: .8rem;
+  font-size: .95rem; font-weight: 600;
+  border-left: 2px solid var(--gold-light); border-radius: 0 8px 8px 0;
+}
+#operations-nav .nav-menu-panel, #growth-nav .nav-menu-panel { left: auto; right: 0; }
 .nav-menu-panel .tab:hover { color: var(--navy); background: #f3efe6; border-color: transparent; }
 .nav-menu-panel .tab.active { color: #f6f4ef; background: var(--navy); border-color: var(--navy); }
 
@@ -411,9 +417,18 @@ select option:checked { background-color: #e7e1d6; color: #1c1915; }
 .hub-kpi.clickable { cursor: pointer; transition: .15s; }
 .hub-kpi.clickable:hover { border-color: var(--gold-dim); transform: translateY(-1px); }
 
+.hub-group { margin: .35rem 0 1.15rem; }
+.hub-group-head {
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  margin: .15rem 0 .55rem;
+}
+.hub-group-title {
+  margin: 0; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--gold-dim); font-weight: 700;
+}
 .hub-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1fr 1.25fr;
   gap: 1rem;
   margin-bottom: 1rem;
 }
