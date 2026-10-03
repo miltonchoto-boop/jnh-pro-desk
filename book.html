@@ -5,56 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Book Estimate Appointment · JNH Masonry</title>
   <meta name="description" content="Schedule a free on-site estimate with JNH Masonry Inc. — Bay Shore & Suffolk County." />
-  <link rel="stylesheet" href="styles.css?v=20261002-win" />
+  <link rel="stylesheet" href="styles.css?v=20261002-dmvdesk" />
   <style>
     .book-shell { max-width: 720px; margin: 0 auto; padding: 1.25rem 1.1rem 3rem; }
     .book-hero {
       text-align: center; padding: 1.5rem 1rem 1.25rem;
-      border: 1px solid #d1d1d1; border-radius: 4px;
-      background: #ffffff;
+      border: 1px solid #d5dee8; border-radius: 8px;
+      background: #f9fbfd;
       box-shadow: none; margin-bottom: 1.25rem;
     }
     .book-hero img {
       width: clamp(88px, 22vw, 132px); height: auto; aspect-ratio: 1; object-fit: contain;
-      border-radius: 2px; background: #ffffff; border: 1px solid #d1d1d1; filter: none;
+      border-radius: 5px; background: #ffffff; border: 1px solid #d5dee8; filter: none;
     }
-    .book-hero h1 { margin: .75rem 0 .35rem; color: #1a1a1a; font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 600; }
+    .book-hero h1 { margin: .75rem 0 .35rem; color: #1f3b64; font-size: clamp(20px, 4vw, 26px); font-weight: 700; }
     .book-hero p { margin: 0; color: var(--text-muted); font-size: 1.05rem; line-height: 1.5; }
     .book-steps { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin: 1rem 0 0; }
     .book-steps span {
       font-size: .82rem; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); font-weight: 600;
-      padding: .3rem .65rem; border-radius: 2px; border: 1px solid var(--border); background: #f3f3f3;
+      padding: .3rem .65rem; border-radius: 5px; border: 1px solid var(--border); background: #eef2f6;
     }
-    .book-steps span.on { color: #ffffff; background: #0078d4; border-color: #0078d4; font-weight: 600; }
+    .book-steps span.on { color: #fff; background: #1f5fae; border-color: #1f5fae; font-weight: 700; }
     .cal-grid {
       display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; margin-top: .75rem;
     }
-    .cal-grid .dow { text-align: center; font-size: .78rem; color: #1a1a1a; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: .25rem; }
+    .cal-grid .dow { text-align: center; font-size: .78rem; color: #243447; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: .25rem; }
     .cal-day {
-      aspect-ratio: 1; border: 1px solid var(--border); border-radius: 2px; background: #ffffff;
+      aspect-ratio: 1; border: 1px solid var(--border); border-radius: 5px; background: #ffffff;
       color: var(--text-muted); cursor: default; font-size: 1rem; display: grid; place-items: center;
     }
-    .cal-day.open { color: var(--text); cursor: pointer; border-color: #8a8a8a; }
-    .cal-day.open:hover { background: #deecf9; color: #1a1a1a; }
-    .cal-day.selected { background: #0078d4; color: #ffffff; font-weight: 700; border-color: #0078d4; }
+    .cal-day.open { color: var(--text); cursor: pointer; border-color: #c5ccd8; }
+    .cal-day.open:hover { background: #e8eef6; color: #243447; }
+    .cal-day.selected { background: #1f5fae; color: #ffffff; font-weight: 700; border-color: #1f5fae; }
     .cal-day.muted { opacity: .35; }
     .slot-grid { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .65rem; }
     .slot-btn {
-      border: 1px solid #8a8a8a; background: #ffffff; color: var(--text);
-      padding: .5rem .85rem; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600;
+      border: 0; background: #475569; color: #fff;
+      padding: 7px 12px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600;
     }
-    .slot-btn:hover { border-color: #0078d4; color: #1a1a1a; background: #f3f3f3; }
-    .slot-btn.selected {
-      background: #0078d4; color: #ffffff;
-      border-color: #0078d4; font-weight: 600;
-    }
+    .slot-btn:hover { background: #334155; color: #fff; }
+    .slot-btn.selected { background: #1f5fae; color: #fff; font-weight: 700; }
     .book-success {
-      text-align: center; padding: 1.5rem; border: 1px solid #d1d1d1; border-radius: 4px;
+      text-align: center; padding: 1.5rem; border: 1px solid #d5dee8; border-radius: 8px;
       background: #ffffff;
     }
     .book-success h2 { color: var(--ok); margin: 0 0 .5rem; }
     .book-foot { text-align: center; margin-top: 1.5rem; font-size: .82rem; color: var(--text-muted); }
-    .book-foot a { color: #0078d4; }
+    .book-foot a { color: #124e78; }
     .embed-mode .book-hero img { width: 72px; }
     .embed-mode .book-hero { padding: 1rem; }
   </style>
@@ -65,7 +62,7 @@
       <img src="jnh-logo-official-cinematic.png" width="1254" height="1254" alt="JNH Masonry Inc." />
       <h1>Request Estimate Appointment</h1>
       <p>Free on-site estimate · Licensed &amp; Insured · Bay Shore &amp; Suffolk County</p>
-      <p class="muted" style="margin:.55rem 0 0;font-size:.9rem"><strong style="color:#0078d4">Request appointment — Jose will confirm</strong> before it’s locked on the calendar.</p>
+      <p class="muted" style="margin:.55rem 0 0;font-size:.9rem"><strong style="color:#124e78">Request appointment — Jose will confirm</strong> before it’s locked on the calendar.</p>
       <div class="book-steps" id="book-steps">
         <span data-step="1" class="on">1 · Date</span>
         <span data-step="2">2 · Time</span>
@@ -79,7 +76,7 @@
           <h2 style="margin:0">Pick a date</h2>
           <div class="actions">
             <button type="button" class="btn ghost small" id="cal-prev">←</button>
-            <strong id="cal-label" style="color:#0078d4; min-width:9rem; text-align:center"></strong>
+            <strong id="cal-label" style="color:#1f3b64; min-width:9rem; text-align:center"></strong>
             <button type="button" class="btn ghost small" id="cal-next">→</button>
           </div>
         </div>
@@ -127,7 +124,7 @@
         <div class="book-success">
           <h2>Request received</h2>
           <p id="done-summary" class="muted"></p>
-          <p style="margin:1rem 0 .5rem"><strong style="color:#0078d4">Pending</strong> — Jose will confirm this appointment (usually same day). Need to change something?</p>
+          <p style="margin:1rem 0 .5rem"><strong style="color:#124e78">Pending</strong> — Jose will confirm this appointment (usually same day). Need to change something?</p>
           <div class="actions" style="justify-content:center">
             <a class="btn primary" href="tel:+16319651754">Call (631) 965-1754</a>
             <a class="btn ghost" id="done-email" href="#">Email details to Jose</a>
@@ -309,7 +306,7 @@
       setStep(4);
       var d = new Date(ap.date + "T12:00:00");
       $("#done-summary").innerHTML =
-        "<strong style=\"color:#0078d4\">" + escapeHtml(ap.name) + "</strong><br>" +
+        "<strong style=\"color:#124e78\">" + escapeHtml(ap.name) + "</strong><br>" +
         d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) +
         " at " + B.formatTimeLabel(ap.time) + "<br>" +
         escapeHtml(ap.address) + "<br>" + escapeHtml(ap.phone) +
