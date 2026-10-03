@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>JNH Masonry Pro Desk</title>
-  <link rel="stylesheet" href="styles.css?v=20261002-exec" />
+  <link rel="stylesheet" href="styles.css?v=20261002-exec-greeting" />
 </head>
 <body>
   <div id="gate" class="gate" aria-live="polite">
@@ -101,6 +101,7 @@
       <section id="view-hub" class="view active">
         <div class="panel-head">
           <div>
+            <p id="hub-greeting" class="hub-greeting" role="status" aria-live="polite"></p>
             <h1>Project Hub</h1>
             <p class="muted">Live snapshot of estimates, jobs, appointments, payroll, and spend.</p>
           </div>
@@ -1569,5 +1570,29 @@
   <script src="chat-config.js"></script>
   <script src="app.js"></script>
   <script src="advisor.js"></script>
+  <script>
+    (function () {
+      var greeting = document.getElementById("hub-greeting");
+      if (!greeting) return;
+      var timeZone = "America/New_York";
+      function updateGreeting() {
+        var parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: timeZone,
+          hour: "2-digit",
+          hourCycle: "h23"
+        }).formatToParts(new Date());
+        var hourPart = parts.find(function (part) { return part.type === "hour"; });
+        var hour = hourPart ? Number(hourPart.value) : new Date().getHours();
+        var period = hour < 5 ? "Good night"
+          : hour < 12 ? "Good morning"
+          : hour < 17 ? "Good afternoon"
+          : hour < 21 ? "Good evening"
+          : "Good night";
+        greeting.textContent = period + ", Jose";
+      }
+      updateGreeting();
+      window.setInterval(updateGreeting, 60000);
+    }());
+  </script>
 </body>
 </html>
